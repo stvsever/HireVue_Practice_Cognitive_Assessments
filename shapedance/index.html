@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shapedance</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background: #0e1117; color: #e6edf3; text-align: center; margin: 0; }
+    .container { max-width: 860px; margin: 40px auto; background: #161b22; padding: 24px; border-radius: 16px; }
+    .row { display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .progress-wrap { height: 12px; background: #0b1220; border: 1px solid #22304a; border-radius: 999px; overflow: hidden; flex:1; }
+    .progress-bar { height: 100%; width: 100%; background: #2f81f7; transition: width 0.1s linear; }
+    .muted { color:#9da7b3; font-size:12px; }
+    button { background:#2b3547; color:#e6edf3; border:1px solid #3b4660; padding:10px 14px; border-radius:10px; cursor:pointer; }
+    label.switch { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#9da7b3; }
+    label.switch input { accent-color:#2f81f7; }
+    .info { margin-top: 2px; color:#9da7b3; font-size: 14px; }
+    .target-area { display:flex; gap:16px; align-items:center; justify-content:center; margin-top: 12px; flex-wrap: wrap; }
+    .target-box { display:none; flex-direction:column; align-items:center; }
+    .label { font-size:12px; color:#9da7b3; margin-top:6px; }
+    .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+    .tile { background:#1f2937; border:2px solid #2b3547; border-radius:12px; padding:10px; cursor:pointer; user-select:none; display:flex; align-items:center; justify-content:center; position:relative; }
+    .tile.selected { border-color:#2f81f7; background:#243b66; }
+    .tile canvas { width: 120px; height: 120px; }
+    .target-tile { background:#101826; border:2px dashed #314161; }
+    .target-tile canvas { width: 140px; height: 140px; }
+    .status { margin-top: 12px; min-height: 24px; }
+    .ok { color:#22c55e; }
+    .fail { color:#ef4444; }
+    @keyframes slow-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .spin { animation: slow-spin 9s linear infinite; }
+    .back-btn { position: fixed; top: 16px; left: 16px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; background: rgba(27, 38, 59, 0.9); color:#e6edf3; border:1px solid #3b4660; border-radius: 999px; text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,0.35); z-index: 1000; }
+    .back-btn:hover { background: #2b3547; }
+    .back-btn .arrow { font-size: 20px; line-height: 1; transform: translateX(-1px); }
+  </style>
+</head>
+<body>
+  <a class="back-btn" href="../" aria-label="Back to main"><span class="arrow">←</span></a>
+  <div class="container">
+    <h2>Shapedance</h2>
+    <div class="row">
+      <div class="progress-wrap"><div id="progress" class="progress-bar"></div></div>
+      <div class="muted" id="totalClock" title="Total time left">03:00</div>
+      <label class="switch" title="Enable/disable sounds">
+        <input type="checkbox" id="soundToggle" />
+        Sound
+      </label>
+    </div>
+    <div class="info">Select all tiles matching the target arrangement. Some tiles may be rotated.</div>
+    <div class="target-area"></div>
+    <div class="grid" id="grid"></div>
+    <div class="status" id="status"></div>
+    <div style="margin-top:12px; display:flex; gap:8px; justify-content:center;">
+      <button id="start">Start Game</button>
+      <button id="compare" title="Check your selection">Compare</button>
+    </div>
+  </div>
+
+  <audio id="sound-select" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+  <audio id="sound-success" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+
+  <script>
+    // ==== DOM refs ====
+    const grid = document.getElementById('grid');
+    const statusEl = document.getElementById('status');
+    const progress = document.getElementById('progress');
+    const startBtn = document.getElementById('start');
+    const compareBtn = document.getElementById('compare');
+    const soundToggle = document.getElementById('soundToggle');
+
+    const selectSound = document.getElementById('sound-select');
+    const successSound = document.getElementById('sound-success');
+
+    // ==== Audio wrapper ====
+    let SOUNDS_ENABLED = false;
+    function safePlay(a){ if(!SOUNDS_ENABLED||!a||typeof a.play!=="function") return; try{ a.currentTime=0; const p=a.play(); if(p&&p.then) p.catch(()=>{}); }catch(e){} }
+    soundToggle.checked = true; SOUNDS_ENABLED = true;
+    soundToggle.addEventListener('change', ()=>{ SOUNDS_ENABLED = soundToggle.checked; safePlay(selectSound); });
+
+    // ==== State ====
+    const MAX_TILES = 6; // up to 6 patterns total
+    let questionTimer = null; // 30s timer
+    let totalTimer = null;    // 3-minute timer
+    let totalLeft = 180;
+    let gameActive = false;
+    let difficultyLevel = 0;
+    let selected = [];
+    let round = null; // { size, target, options:[{grid, rotate, spin}], correctIdx:number[] }
+
+    // ==== Utils ====
+    function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+    function fmtTime(s){ const m=Math.floor(s/60).toString().padStart(2,'0'); const r=(s%60).toString().padStart(2,'0'); return m+':'+r; }
+
+    function rotateGridCW(g){
+      const n = g.length; const r = Array.from({length:n},()=>Array(n));
+      for(let i=0;i<n;i++) for(let j=0;j<n;j++) r[j][n-1-i] = g[i][j];
+      return r;
+    }
+    function gridsEqual(a,b){
+      const n=a.length; if(b.length!==n) return false;
+      for(let i=0;i<n;i++) for(let j=0;j<n;j++) if(a[i][j]!==b[i][j]) return false; return true;
+    }
+    function equalModRotation(a,b){
+      if (gridsEqual(a,b)) return true;
+      let r = b;
+      for(let k=0;k<3;k++){ r = rotateGridCW(r); if (gridsEqual(a,r)) return true; }
+      return false;
+    }
+
+    function cloneGrid(g){ return g.map(row=>row.slice()); }
+    function positionsByState(g){
+      const n=g.length; const filled=[]; const empty=[];
+      for(let i=0;i<n;i++) for(let j=0;j<n;j++) ((g[i][j]===-1)?empty:filled).push([i,j]);
+      return {filled, empty};
+    }
+    function distinctShapeCount(g){
+      const s = new Set(); const n=g.length; for(let i=0;i<n;i++) for(let j=0;j<n;j++){ if(g[i][j]!==-1) s.add(g[i][j]); }
+      return s.size;
+    }
+    function randomShapeExcept(curr){ let s = randInt(0,2); while (s === curr) s = randInt(0,2); return s; }
+    function mutateFromTarget(target){
+      const n = target.length; const total = n*n;
+      const minMut = Math.max(1, Math.ceil(total * 0.25));
+      const maxMut = Math.max(minMut, Math.ceil(total * 0.50));
+      const k = randInt(minMut, maxMut);
+      const g = cloneGrid(target);
+      const { filled, empty } = positionsByState(target);
+
+      let pairs = Math.min(Math.floor(k/2), Math.min(filled.length, empty.length));
+      const usedFilled = new Set();
+      const usedEmpty = new Set();
+      function pick(arr, used){ let idx; let guard=0; do { idx = randInt(0, arr.length-1); guard++; } while(used.has(idx) && guard<1000); used.add(idx); return arr[idx]; }
+
+      for(let p=0;p<pairs;p++){
+        const [fi,fj] = pick(filled, usedFilled);
+        const [ei,ej] = pick(empty, usedEmpty);
+        g[fi][fj] = -1; // remove
+        g[ei][ej] = randInt(0,2); // add
+      }
+      let changes = pairs*2;
+      const need = k - changes;
+      for(let c=0;c<need;c++){
+        const [i,j] = pick(filled, usedFilled);
+        const curr = g[i][j] !== -1 ? g[i][j] : target[i][j];
+        if (g[i][j] === -1){
+          let found=false;
+          for(let t=0;t<filled.length;t++){
+            if (!usedFilled.has(t)){
+              const [ii,jj] = filled[t];
+              if (g[ii][jj] !== -1){ usedFilled.add(t); g[ii][jj] = randomShapeExcept(g[ii][jj]); found=true; break; }
+            }
+          }
+          if (!found) break;
+        } else {
+          g[i][j] = randomShapeExcept(curr);
+        }
+      }
+      if (distinctShapeCount(g) < 2){
+        const now = positionsByState(g).filled;
+        if (now.length > 0){
+          const [i,j] = now[randInt(0, now.length-1)];
+          g[i][j] = randomShapeExcept(g[i][j]);
+        }
+      }
+      return g;
+    }
+
+    function levelSpec(lvl){
+      if (lvl <= 3) return { size: 2 };
+      if (lvl <= 8) return { size: 3 };
+      if (lvl <= 14) return { size: 4 };
+      return { size: 5 };
+    }
+
+    function randomGrid(n){
+      const total = n*n;
+      const minFill = Math.max(1, Math.floor(0.50 * total));
+      const maxFill = Math.max(minFill, Math.floor(0.75 * total));
+      const toFill = Math.floor(Math.random()*(maxFill-minFill+1))+minFill;
+      const g = Array.from({length:n},()=>Array.from({length:n},()=>-1));
+      const idxs = Array.from({length:total},(_,k)=>k).sort(()=>Math.random()-0.5).slice(0, toFill);
+      for (const idx of idxs){
+        const i = Math.floor(idx / n);
+        const j = idx % n;
+        g[i][j] = Math.floor(Math.random()*3);
+      }
+      return g;
+    }
+
+    function countFilled(g){
+      let c = 0; const n = g.length; for(let i=0;i<n;i++) for(let j=0;j<n;j++) if(g[i][j] !== -1) c++; return c;
+    }
+
+    function makeRound(){
+      difficultyLevel += 1;
+      const { size } = levelSpec(difficultyLevel);
+      const target = randomGrid(size);
+      const r = Math.random();
+      const repeats = r < 0.5 ? 2 : (r < 0.8 ? 3 : 4);
+      const maxDistr = Math.min(4, Math.max(0, 6 - repeats));
+      const distractors = Math.max(0, maxDistr) === 0 ? 0 : Math.floor(Math.random()*maxDistr)+1;
+      const totalTiles = repeats + distractors;
+      const options = [];
+      const used = new Set();
+      used.add(JSON.stringify(target));
+
+      for (let i=0;i<repeats;i++) {
+        options.push({ grid: target, rotate: Math.floor(Math.random()*360), spin: Math.random() < 0.3 });
+      }
+      let guard = 0;
+      while (options.length < totalTiles && guard < 500) {
+        guard++;
+        const cand = mutateFromTarget(target);
+        const key = JSON.stringify(cand);
+        if (used.has(key)) continue;
+        used.add(key);
+        options.push({ grid: cand, rotate: Math.floor(Math.random()*360), spin: Math.random() < 0.3 });
+      }
+      options.sort(()=>Math.random()-0.5);
+
+      const correctIdx = [];
+      options.forEach((opt, idx)=>{ if (equalModRotation(target, opt.grid)) correctIdx.push(idx); });
+
+      return { size, target, options, correctIdx };
+    }
+
+    function drawPattern(ctx, grid){
+      const n = grid.length;
+      const w = ctx.canvas.width; const h = ctx.canvas.height;
+      ctx.clearRect(0,0,w,h);
+      ctx.fillStyle = '#0f172a'; ctx.fillRect(0,0,w,h);
+      const cell = Math.min(w, h) / n;
+      ctx.strokeStyle = '#22304a'; ctx.lineWidth = 1;
+      for(let i=1;i<n;i++){
+        ctx.beginPath(); ctx.moveTo(i*cell,0); ctx.lineTo(i*cell,h); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0,i*cell); ctx.lineTo(w,i*cell); ctx.stroke();
+      }
+      for(let i=0;i<n;i++){
+        for(let j=0;j<n;j++){
+          const v = grid[i][j];
+          if (v === -1) continue;
+          const cx = j*cell + cell/2; const cy = i*cell + cell/2; const r = cell*0.28;
+          if (v === 0){
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+          } else if (v === 1){
+            ctx.fillStyle = '#2f81f7';
+            const s = r*1.6; ctx.fillRect(cx - s/2, cy - s/2, s, s);
+          } else {
+            ctx.fillStyle = '#eab308';
+            const s = r*1.9;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - s/2);
+            ctx.lineTo(cx - s/2, cy + s/2);
+            ctx.lineTo(cx + s/2, cy + s/2);
+            ctx.closePath(); ctx.fill();
+          }
+        }
+      }
+      ctx.strokeStyle = '#3b4660'; ctx.lineWidth = 2; ctx.strokeRect(1,1,w-2,h-2);
+    }
+
+    function renderRound(){
+      grid.innerHTML = '';
+      selected = [];
+      round.options.forEach((opt, idx)=>{
+        const el = document.createElement('div');
+        el.className = 'tile';
+        const canvas = document.createElement('canvas');
+        canvas.width = 160; canvas.height = 160;
+        const ctx = canvas.getContext('2d');
+        drawPattern(ctx, opt.grid);
+
+        const outer = document.createElement('div');
+        outer.style.display = 'inline-block';
+        outer.style.transform = `rotate(${opt.rotate}deg)`;
+        const inner = document.createElement('div');
+        if (opt.spin) inner.classList.add('spin');
+        inner.appendChild(canvas);
+        outer.appendChild(inner);
+
+        el.appendChild(outer);
+        el.addEventListener('click', ()=>toggle(idx));
+        grid.appendChild(el);
+      });
+
+      if (gameActive) startQuestionTimer();
+    }
+
+    function toggle(i){
+      if (!gameActive) return;
+      const el = grid.children[i];
+      if (el.classList.contains('selected')){
+        el.classList.remove('selected');
+        selected = selected.filter(x=>x!==i);
+      } else {
+        el.classList.add('selected');
+        selected.push(i);
+        safePlay(selectSound);
+      }
+    }
+
+    function evaluateSelection(){
+      const expected = new Set(round.correctIdx);
+      const chosen = new Set(selected);
+      if (expected.size !== chosen.size) return false;
+      for (const i of expected){ if (!chosen.has(i)) return false; }
+      return true;
+    }
+
+    function onCompare(){
+      if (!gameActive) return;
+      clearInterval(questionTimer);
+      const ok = evaluateSelection();
+      if (ok){
+        safePlay(successSound);
+        statusEl.textContent = 'Correct!'; statusEl.className = 'status ok';
+        setTimeout(nextRound, 900);
+      } else {
+        statusEl.textContent = 'Wrong!'; statusEl.className = 'status fail';
+        setTimeout(()=>regenSameLevel(), 900);
+      }
+    }
+
+    function nextRound(){
+      if (!gameActive) return;
+      statusEl.textContent = ''; statusEl.className = 'status';
+      round = makeRound();
+      renderRound();
+    }
+    function regenSameLevel(){
+      if (!gameActive) return;
+      statusEl.textContent = ''; statusEl.className = 'status';
+      difficultyLevel -= 1;
+      round = makeRound();
+      renderRound();
+    }
+
+    function startQuestionTimer(){
+      let t = 30;
+      progress.style.width = '100%';
+      clearInterval(questionTimer);
+      questionTimer = setInterval(()=>{
+        if (!gameActive) { clearInterval(questionTimer); return; }
+        t -= 0.1; if (t < 0) t = 0;
+        progress.style.width = (t/30*100) + '%';
+        if (t === 0){
+          clearInterval(questionTimer);
+          statusEl.textContent = 'Time up!'; statusEl.className = 'status fail';
+          setTimeout(()=>regenSameLevel(), 800);
+        }
+      }, 100);
+    }
+
+    function startTotalTimer(){
+      const clock = document.getElementById('totalClock');
+      clock.textContent = fmtTime(totalLeft);
+      clearInterval(totalTimer);
+      totalTimer = setInterval(()=>{
+        if (!gameActive) { clearInterval(totalTimer); return; }
+        totalLeft -= 1; if (totalLeft < 0) totalLeft = 0;
+        clock.textContent = fmtTime(totalLeft);
+        if (totalLeft === 0){
+          clearInterval(totalTimer); clearInterval(questionTimer);
+          gameActive = false;
+          statusEl.textContent = "Time's up for the game!"; statusEl.className = 'status fail';
+        }
+      }, 1000);
+    }
+
+    function startGame(){
+      totalLeft = 180; gameActive = true; statusEl.textContent=''; statusEl.className='status';
+      difficultyLevel = 0; selected = [];
+      round = makeRound();
+      renderRound();
+      startTotalTimer();
+      safePlay(selectSound);
+    }
+
+    startBtn.addEventListener('click', startGame);
+    compareBtn.addEventListener('click', onCompare);
+  </script>
+</body>
+</html>
+
+

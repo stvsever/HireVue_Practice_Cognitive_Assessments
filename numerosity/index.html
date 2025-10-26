@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Numerosity</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background: #0e1117; color: #e6edf3; text-align: center; margin: 0; }
+    .container { max-width: 760px; margin: 40px auto; background: #161b22; padding: 24px; border-radius: 16px; }
+    .row { display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .progress-wrap { height: 12px; background: #0b1220; border: 1px solid #22304a; border-radius: 999px; overflow: hidden; flex:1; }
+    .progress-bar { height: 100%; width: 100%; background: #2f81f7; transition: width 0.1s linear; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 20px; }
+    .number { background: #1f2937; border: 2px solid #2b3547; border-radius: 12px; padding: 22px; font-size: 26px; cursor: pointer; user-select: none; }
+    .number.selected { border-color: #2f81f7; background: #243b66; }
+    .status { margin-top: 12px; min-height: 24px; }
+    .ok { color: #22c55e; }
+    .fail { color: #ef4444; }
+    button { background:#2b3547; color:#e6edf3; border:1px solid #3b4660; padding:10px 14px; border-radius:10px; cursor:pointer; }
+    .muted { color:#9da7b3; font-size:12px; }
+    label.switch { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#9da7b3; }
+    label.switch input { accent-color:#2f81f7; }
+    .chip { display:inline-block; background:#1f2937; border:1px solid #2b3547; padding:6px 10px; border-radius:999px; font-size:12px; margin: 0 6px; }
+    .back-btn { position: fixed; top: 16px; left: 16px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; background: rgba(27, 38, 59, 0.9); color:#e6edf3; border:1px solid #3b4660; border-radius: 999px; text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,0.35); z-index: 1000; }
+    .back-btn:hover { background: #2b3547; }
+    .back-btn .arrow { font-size: 20px; line-height: 1; transform: translateX(-1px); }
+  </style>
+</head>
+<body>
+  <a class="back-btn" href="../" aria-label="Back to main"><span class="arrow">←</span></a>
+  <div class="container">
+    <h2>Numerosity</h2>
+    <div class="row">
+      <div class="progress-wrap"><div id="progress" class="progress-bar"></div></div>
+      <div class="muted" id="totalClock" title="Total time left">03:00</div>
+      <label class="switch" title="Enable/disable sounds (helpful if your browser/sandbox blocks audio)">
+        <input type="checkbox" id="soundToggle" />
+        Sound
+      </label>
+    </div>
+    <div id="info">Operation <span class="chip">+</span> Target <span class="chip">0</span></div>
+    <div class="grid" id="grid"></div>
+    <div class="status" id="status"></div>
+    <button id="start">Start Game</button>
+  </div>
+  <!-- Audio elements (may be blocked in some sandboxes) -->
+  <audio id="sound-select" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+  <audio id="sound-success" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+
+  <script>
+    // ==== DOM refs ====
+    const grid = document.getElementById('grid');
+    const info = document.getElementById('info');
+    const status = document.getElementById('status');
+    const progress = document.getElementById('progress');
+    const startBtn = document.getElementById('start');
+    const soundToggle = document.getElementById('soundToggle');
+
+    const selectSound = document.getElementById('sound-select');
+    const successSound = document.getElementById('sound-success');
+
+    // ==== Audio safety wrapper ====
+    // Some environments block HTMLMediaElement.play().
+    // Use a safe wrapper that quietly no-ops if unsupported or rejected.
+    let SOUNDS_ENABLED = false; // default OFF to avoid errors
+    function safePlay(audio) {
+      if (!SOUNDS_ENABLED || !audio || typeof audio.play !== 'function') return;
+      try {
+        audio.currentTime = 0;
+        const p = audio.play();
+        if (p && typeof p.then === 'function') p.catch(() => {});
+      } catch (e) { /* ignore */ }
+    }
+    // Enable sound by default and reflect in UI toggle
+    soundToggle.checked = true;
+    SOUNDS_ENABLED = true;
+    soundToggle.addEventListener('change', () => {
+      SOUNDS_ENABLED = soundToggle.checked;
+      // attempt a tiny play on user gesture to prime permissions; ignore failures
+      safePlay(selectSound);
+    });
+
+    // ==== State ====
+    let questionTimer = null;           // per-question timer (30s)
+    let totalTimer = null;              // total game timer (3 min)
+    let totalLeft = 180;                // total seconds left
+    let gameActive = false;             // blocks input when game over
+
+    let selected = [];
+    let difficultyLevel = 0;
+    let round = {};
+
+    // ==== Utils ====
+    function randInt(min, max){ return Math.floor(Math.random()*(max-min+1))+min; }
+    function fmtTime(s){ const m=Math.floor(s/60).toString().padStart(2,'0'); const r=(s%60).toString().padStart(2,'0'); return m+':'+r; }
+
+    // Level schedule ensures fair distribution and gradual ramp
+    // 1-3: + (2); 4-6: − (2); 7-9: × (2); 10-12: ÷ (2 integer); 13-16: + (3); 17-19: − (3); 20+: × (3, no 1s)
+    function levelSpec(lvl){
+      if (lvl <= 3)  return {op:'add', count:2, negTarget:false};
+      if (lvl <= 6)  return {op:'sub', count:2, negTarget:true};
+      if (lvl <= 9)  return {op:'mul', count:2, negTarget:false};
+      if (lvl <= 12) return {op:'div', count:2, negTarget:false};
+      if (lvl <= 16) return {op:'add', count:3, negTarget:false};
+      return {op:'mul', count:3, negTarget:false};
+    }
+
+    // Guarantee at least one solution and positive option tiles (no 1s for 3-number mult)
+    function makeRound(){
+      difficultyLevel += 1;
+      const spec = levelSpec(difficultyLevel);
+
+      // Build a solution FIRST (as an array to preserve duplicates),
+      // then add distractors, so a solvable set is guaranteed.
+      let solution = [];
+      let target;
+
+      if (spec.op === 'add') {
+        if (spec.count === 3) {
+          solution = [randInt(2, 10), randInt(2, 20), randInt(2, 30)];
+        } else {
+          solution = [randInt(2, 20), randInt(2, 30)];
+        }
+        target = solution.reduce((a,b)=>a+b,0);
+      }
+      else if (spec.op === 'sub') {
+        // two-number subtraction; may yield negative target
+        const a = randInt(2, 30);
+        const b = randInt(2, 30);
+        solution = [a, b];
+        target = a - b;
+      }
+      else if (spec.op === 'mul') {
+        if (spec.count === 3) {
+          // exclude 1s; widen factor range to increase difficulty
+          solution = [randInt(2, 6), randInt(2, 10), randInt(2, 12)];
+        } else {
+          solution = [randInt(2, 10), randInt(2, 20)];
+        }
+        target = solution.reduce((a,b)=>a*b,1);
+      }
+      else if (spec.op === 'div') {
+        // integer division only
+        const divisor = randInt(2, 12);
+        const quotient = randInt(2, 12);
+        const dividend = divisor * quotient;
+        solution = [dividend, divisor];
+        target = quotient;
+      }
+
+      // Start tiles with the solution numbers (keep duplicates),
+      // then add positive distractors until we have 6 tiles.
+      const tiles = [...solution];
+      if (spec.op === 'mul' && spec.count === 3) {
+        // Harder: avoid any two-number product equaling the target to prevent easy 2-pick solves
+        function okDistractor(candidate) {
+          for (const v of tiles) {
+            if (v * candidate === target) return false;
+          }
+          return true;
+        }
+        let attempts = 0;
+        while (tiles.length < 6 && attempts < 300) {
+          attempts += 1;
+          // cycle through ranges to mix sizes
+          const phase = attempts % 3;
+          const candidate = phase === 0 ? randInt(2, 12) : (phase === 1 ? randInt(6, 20) : randInt(10, 30));
+          if (okDistractor(candidate)) tiles.push(candidate);
+        }
+        // Fallback in the unlikely case we still need to fill slots
+        while (tiles.length < 6) {
+          const candidate = randInt(2, 30);
+          if (okDistractor(candidate)) tiles.push(candidate);
+        }
+      } else {
+        while (tiles.length < 6) tiles.push(randInt(2, 30));
+      }
+
+      const tileArray = tiles.sort(()=>Math.random()-0.5);
+      return { op: spec.op, target, count: spec.count, tiles: tileArray, solution };
+    }
+
+    function symbol(op){ return ({add:'+', sub:'−', mul:'×', div:'÷'})[op]; }
+
+    function renderRound(){
+      grid.innerHTML = '';
+      info.innerHTML = `Operation <span class="chip">${symbol(round.op)}</span> Target <span class="chip">${round.target}</span>`;
+      round.tiles.forEach((n,i)=>{
+        const el = document.createElement('div');
+        el.className = 'number';
+        el.textContent = n;
+        el.addEventListener('click', ()=>toggle(i));
+        grid.appendChild(el);
+      });
+      if (gameActive) startQuestionTimer();
+    }
+
+    function toggle(i){
+      if (!gameActive) return;
+      const el = grid.children[i];
+      const willSelect = !el.classList.contains('selected');
+      const minNeeded = (round.count === 3 && round.op === 'mul' ? 3 : 2);
+      const completes = willSelect && (selected.length + 1 >= minNeeded) && (selected.length + 1 <= round.count);
+      if (!completes) safePlay(selectSound);
+
+      if (el.classList.contains('selected')) {
+        el.classList.remove('selected');
+        selected = selected.filter(x=>x!==i);
+      } else {
+        el.classList.add('selected');
+        selected.push(i);
+      }
+      checkSelection();
+    }
+
+    function checkSelection(){
+      if (!gameActive) return;
+      const minNeeded = (round.count === 3 && round.op === 'mul' ? 3 : 2);
+      if (selected.length < minNeeded) return;
+
+      const vals = selected.map(i=>parseInt(grid.children[i].textContent,10));
+      let shouldEvaluate = false;
+      if (round.count === 3) {
+        if (round.op === 'mul') {
+          shouldEvaluate = (selected.length === 3);
+        } else {
+          shouldEvaluate = (selected.length === 2) || (selected.length === 3);
+        }
+      } else {
+        shouldEvaluate = (selected.length === 2);
+      }
+      if (!shouldEvaluate) return;
+
+      const ok = evaluate(round.op, vals.slice(0, selected.length), round.target);
+
+      if (ok) {
+        clearInterval(questionTimer);
+        safePlay(successSound);
+        status.textContent = 'Correct!';
+        status.className = 'status ok';
+        setTimeout(nextRound, 900);
+        return;
+      }
+
+      // Mid-state for 3-number non-multiplication: allow picking a third without UI message or timer reset
+      if (round.count === 3 && round.op !== 'mul' && selected.length === 2) {
+        return;
+      }
+
+      // Final wrong (either 2-number round or 3-number with 3 picks)
+      clearInterval(questionTimer);
+      status.textContent = 'Wrong!';
+      status.className = 'status fail';
+      setTimeout(()=>regenSameLevel(), 900);
+    }
+
+    function evaluate(op, arr, target){
+      if (op === 'add') return arr.reduce((a,b)=>a+b,0) === target;
+      if (op === 'mul') return arr.reduce((a,b)=>a*b,1) === target;
+      if (op === 'sub' && arr.length === 2) { const [x,y] = arr; return (x - y === target) || (y - x === target); }
+      if (op === 'div' && arr.length === 2) { const [x,y] = arr; return (y !== 0 && x / y === target) || (x !== 0 && y / x === target); }
+      return false;
+    }
+
+    function nextRound(){
+      if (!gameActive) return;
+      selected = []; status.textContent = ''; status.className = 'status';
+      round = makeRound();
+      renderRound();
+    }
+    function regenSameLevel(){
+      if (!gameActive) return;
+      selected = []; status.textContent = ''; status.className = 'status';
+      // Do not advance difficulty; recreate the round at the same level
+      difficultyLevel -= 1; // makeRound() will increment back to the original level
+      round = makeRound();
+      renderRound();
+    }
+
+    function startQuestionTimer(){
+      let t = 30;
+      progress.style.width = '100%';
+      clearInterval(questionTimer);
+      questionTimer = setInterval(()=>{
+        if (!gameActive) { clearInterval(questionTimer); return; }
+        t -= 0.1; if (t < 0) t = 0;
+        progress.style.width = (t/30*100) + '%';
+        if (t === 0) {
+          clearInterval(questionTimer);
+          status.textContent = 'Time up!'; status.className = 'status fail';
+          setTimeout(()=>regenSameLevel(), 700);
+        }
+      }, 100);
+    }
+
+    function startTotalTimer(){
+      const clock = document.getElementById('totalClock');
+      clock.textContent = fmtTime(totalLeft);
+      clearInterval(totalTimer);
+      totalTimer = setInterval(()=>{
+        if (!gameActive) { clearInterval(totalTimer); return; }
+        totalLeft -= 1; if (totalLeft < 0) totalLeft = 0;
+        clock.textContent = fmtTime(totalLeft);
+        if (totalLeft === 0) {
+          clearInterval(totalTimer);
+          clearInterval(questionTimer);
+          gameActive = false;
+          status.textContent = "Time's up for the game!";
+          status.className = 'status fail';
+        }
+      }, 1000);
+    }
+
+    function startGame(){
+      // Initialize game state
+      totalLeft = 180; gameActive = true; selected=[]; status.textContent=''; status.className='status';
+      difficultyLevel = 0;
+      round = makeRound();
+      renderRound();
+      startTotalTimer();
+      // prime audio on user gesture
+      safePlay(selectSound);
+    }
+    startBtn.addEventListener('click', startGame);
+  </script>
+</body>
+</html>
+
+

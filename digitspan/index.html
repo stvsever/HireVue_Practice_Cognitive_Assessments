@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Digitspan</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background: #0e1117; color: #e6edf3; text-align: center; margin: 0; }
+    .container { max-width: 760px; margin: 40px auto; background: #161b22; padding: 24px; border-radius: 16px; }
+    .row { display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .progress-wrap { height: 12px; background: #0b1220; border: 1px solid #22304a; border-radius: 999px; overflow: hidden; flex:1; }
+    .progress-bar { height: 100%; width: 100%; background: #2f81f7; transition: width 0.1s linear; }
+    .big { font-size: 40px; letter-spacing: 6px; margin-top: 20px; min-height: 56px; }
+    .status { margin-top: 12px; min-height: 24px; }
+    .ok { color: #22c55e; }
+    .fail { color: #ef4444; }
+    button { background:#2b3547; color:#e6edf3; border:1px solid #3b4660; padding:10px 14px; border-radius:10px; cursor:pointer; }
+    .muted { color:#9da7b3; font-size:12px; }
+    .info { margin-top: 2px; color:#9da7b3; font-size: 14px; }
+    label.switch { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#9da7b3; }
+    label.switch input { accent-color:#2f81f7; }
+    .keypad { display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-top:16px; }
+    .key { background:#1f2937; border:2px solid #2b3547; border-radius:12px; padding:18px; font-size:22px; cursor:pointer; user-select:none; }
+    .key.disabled { opacity: 0.45; pointer-events: none; }
+    .chip { display:inline-block; background:#1f2937; border:1px solid #2b3547; padding:6px 10px; border-radius:999px; font-size:12px; margin: 0 6px; }
+    .back-btn { position: fixed; top: 16px; left: 16px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; background: rgba(27, 38, 59, 0.9); color:#e6edf3; border:1px solid #3b4660; border-radius: 999px; text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,0.35); z-index: 1000; }
+    .back-btn:hover { background: #2b3547; }
+    .back-btn .arrow { font-size: 20px; line-height: 1; transform: translateX(-1px); }
+  </style>
+  <meta name="description" content="Digitspan memory game with multiple reveal modes and progressive difficulty." />
+</head>
+<body>
+  <a class="back-btn" href="../" aria-label="Back to main"><span class="arrow">←</span></a>
+  <div class="container">
+    <h2>Digitspan</h2>
+    <div class="row">
+      <div class="progress-wrap"><div id="progress" class="progress-bar"></div></div>
+      <div class="muted" id="totalClock" title="Total time left">03:00</div>
+      <label class="switch" title="Enable/disable sounds">
+        <input type="checkbox" id="soundToggle" />
+        Sound
+      </label>
+    </div>
+    <div class="info">Memorize the digits and enter them back. Try not to miss!</div>
+    <div id="info" style="display:none">
+      Mode: <span id="modeLabel" class="chip">all-at-once</span>
+      • Span: <span id="spanLabel" class="chip">3</span>
+    </div>
+    <div class="big" id="display">&nbsp;</div>
+    <div class="status" id="status"></div>
+    <div class="keypad" id="keypad"></div>
+    <div style="margin-top:12px; display:flex; gap:8px; justify-content:center;">
+      <button id="start">Start Game</button>
+      <button id="startReverse" title="Start reverse mode (enter digits in reverse)">Start Reverse</button>
+    </div>
+  </div>
+
+  <audio id="sound-select" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+  <audio id="sound-success" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+
+  <script>
+    // ==== DOM refs ====
+    const display = document.getElementById('display');
+    const statusEl = document.getElementById('status');
+    const keypad = document.getElementById('keypad');
+    const progress = document.getElementById('progress');
+    const startBtn = document.getElementById('start');
+    const startReverseBtn = document.getElementById('startReverse');
+    const modeLabel = document.getElementById('modeLabel');
+    const spanLabel = document.getElementById('spanLabel');
+    const soundToggle = document.getElementById('soundToggle');
+
+    const selectSound = document.getElementById('sound-select');
+    const successSound = document.getElementById('sound-success');
+
+    // ==== Audio wrapper ====
+    let SOUNDS_ENABLED = false;
+    function safePlay(a){ if(!SOUNDS_ENABLED||!a||typeof a.play!=="function") return; try{ a.currentTime=0; const p=a.play(); if(p&&p.then) p.catch(()=>{}); }catch(e){} }
+    soundToggle.checked = true; SOUNDS_ENABLED = true;
+    soundToggle.addEventListener('change', ()=>{ SOUNDS_ENABLED = soundToggle.checked; safePlay(selectSound); });
+
+    // ==== State ====
+    let questionTimer = null; // per-sequence display + answer window
+    let totalTimer = null;    // 3-minute game timer
+    let totalLeft = 180;
+    let gameActive = false;
+    let round = null;         // {span, sequence:Array<number>, mode}
+    let userInput = [];
+    let difficultyLevel = 0;
+    let isReverse = false;
+
+    const RevealMode = {
+      All: 'all-at-once',
+      Sequential: 'one-by-one',
+      Halves: 'first-then-second'
+    };
+
+    // ==== Utils ====
+    function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+    function fmtTime(s){ const m=Math.floor(s/60).toString().padStart(2,'0'); const r=(s%60).toString().padStart(2,'0'); return m+':'+r; }
+
+    // Faster ramp: span increases frequently
+    // 1-2: span 3, 3-4: span 4, 5-6: span 5, 7-8: span 6, 9+: span 7
+    // Equal probability among modes:
+    // - Odd spans: one-by-one and all-at-once
+    // - Even spans: one-by-one, all-at-once, and halves
+    function levelSpec(lvl){
+      let span;
+      if (lvl <= 2) span = 3;
+      else if (lvl <= 4) span = 4;
+      else if (lvl <= 6) span = 5;
+      else if (lvl <= 8) span = 6;
+      else if (lvl <= 10) span = 7;
+      else if (lvl <= 12) span = 8;
+      else if (lvl <= 14) span = 9;
+      else span = 10;
+
+      const isEven = span % 2 === 0;
+      const modes = isEven
+        ? [RevealMode.Sequential, RevealMode.All, RevealMode.Halves]
+        : [RevealMode.Sequential, RevealMode.All];
+      return { span, modes };
+    }
+
+    function generateSequence(len){
+      // allow leading zeros; digits 0-9, but avoid consecutive identical digits
+      const seq = [];
+      for (let i = 0; i < len; i++) {
+        let d = randInt(0,9);
+        if (i > 0) {
+          while (d === seq[i-1]) d = randInt(0,9);
+        }
+        seq.push(d);
+      }
+      // For even spans, ensure first half != second half element-wise
+      if (len % 2 === 0) {
+        const half = len / 2;
+        let halvesEqual = true;
+        for (let i = 0; i < half; i++) {
+          if (seq[i] !== seq[half + i]) { halvesEqual = false; break; }
+        }
+        if (halvesEqual) {
+          // Mutate a random index in the second half to break equality
+          const j = half + randInt(0, half - 1);
+          const original = seq[j];
+          const prev = j > 0 ? seq[j - 1] : null;
+          const next = j + 1 < len ? seq[j + 1] : null;
+          const mirror = seq[j - half];
+          let d = randInt(0,9);
+          while (d === original || d === prev || d === next || d === mirror) {
+            d = randInt(0,9);
+          }
+          seq[j] = d;
+        }
+      }
+      return seq;
+    }
+
+    function makeRound(){
+      difficultyLevel += 1;
+      const spec = levelSpec(difficultyLevel);
+      const mode = spec.modes[randInt(0, spec.modes.length-1)];
+      const seq = generateSequence(spec.span);
+      return { span: spec.span, sequence: seq, mode };
+    }
+
+    function renderKeypad(){
+      keypad.innerHTML = '';
+      for (let d=1; d<=9; d++) addKey(d.toString());
+      addKey('0');
+      addKey('⌫', true);
+      addKey('⏎', true);
+      function addKey(label, special=false){
+        const el = document.createElement('div');
+        el.className = 'key';
+        el.textContent = label;
+        el.addEventListener('click', ()=>{
+          if (!gameActive) return;
+          if (label === '⌫') { eraseOne(); return; }
+          if (label === '⏎') { submit(false); return; }
+          if (userInput.length < round.sequence.length) {
+            userInput.push(parseInt(label,10));
+            safePlay(selectSound);
+            updateDisplayForInput();
+            maybeAutoSubmit();
+          }
+        });
+        keypad.appendChild(el);
+      }
+    }
+
+    function disableKeypad(){
+      for (const el of keypad.children) el.classList.add('disabled');
+    }
+    function enableKeypad(){
+      for (const el of keypad.children) el.classList.remove('disabled');
+    }
+
+    function updateDisplayForInput(){
+      const total = round.sequence.length;
+      const masked = userInput.map(String).join('');
+      const placeholders = '•'.repeat(Math.max(0, total - userInput.length));
+      display.textContent = masked + placeholders;
+    }
+
+    function showSequence(mode, seq){
+      modeLabel.textContent = mode;
+      spanLabel.textContent = String(seq.length);
+      statusEl.textContent = '';
+      display.textContent = '';
+      // keep progress static during reveal
+      progress.style.width = '100%';
+      clearInterval(questionTimer);
+      disableKeypad();
+
+      if (mode === RevealMode.All) {
+        display.textContent = seq.join('');
+        // slower reveal window; no progress animation
+        const viewMs = 2500 + seq.length * 500;
+        setTimeout(()=>{ if (gameActive) readyForInput(); }, viewMs);
+      } else if (mode === RevealMode.Sequential) {
+        let i = 0;
+        const stepMs = 1100; // slower per-digit reveal
+        const interval = setInterval(()=>{
+          if (!gameActive) { clearInterval(interval); return; }
+          display.textContent = String(seq[i]);
+          i++;
+          if (i >= seq.length){
+            clearInterval(interval);
+            setTimeout(()=>{ if (gameActive) readyForInput(); }, 900);
+          }
+        }, stepMs);
+      } else if (mode === RevealMode.Halves) {
+        if (seq.length % 2 !== 0) { // if odd, fallback to sequential
+          let i = 0;
+          const stepMs = 1100;
+          const interval = setInterval(()=>{
+            if (!gameActive) { clearInterval(interval); return; }
+            display.textContent = String(seq[i]);
+            i++;
+            if (i >= seq.length){
+              clearInterval(interval);
+              setTimeout(()=>{ if (gameActive) readyForInput(); }, 900);
+            }
+          }, stepMs);
+          return;
+        }
+        const half = Math.floor(seq.length/2);
+        const first = seq.slice(0, half).join('');
+        const second = seq.slice(half).join('');
+        display.textContent = first;
+        setTimeout(()=>{
+          if (!gameActive) return;
+          display.textContent = second;
+          setTimeout(()=>{ if (gameActive) readyForInput(); }, 1200 + seq.length*200);
+        }, 1200 + seq.length*200);
+        return; // do not animate progress during reveal
+      }
+    }
+
+    function startProgressBar(durationMs){
+      let t = durationMs;
+      progress.style.width = '100%';
+      clearInterval(questionTimer);
+      questionTimer = setInterval(()=>{
+        if (!gameActive) { clearInterval(questionTimer); return; }
+        t -= 100; if (t < 0) t = 0;
+        const pct = t / durationMs * 100;
+        progress.style.width = pct + '%';
+        if (t === 0) { clearInterval(questionTimer); }
+      }, 100);
+    }
+
+    function startQuestionTimer(viewMs, onEnd){
+      // No longer used for reveal; kept for compatibility if needed
+      startProgressBar(viewMs);
+      setTimeout(()=>{ if (gameActive) onEnd(); }, viewMs);
+    }
+
+    function readyForInput(){
+      display.textContent = '•'.repeat(round.sequence.length);
+      userInput = [];
+      updateDisplayForInput();
+      enableKeypad();
+      // give 10s to answer
+      let t = 10000;
+      progress.style.width = '100%';
+      clearInterval(questionTimer);
+      questionTimer = setInterval(()=>{
+        if (!gameActive) { clearInterval(questionTimer); return; }
+        t -= 100; if (t < 0) t = 0;
+        progress.style.width = (t/10000*100) + '%';
+        if (t === 0) { clearInterval(questionTimer); submit(true); }
+      }, 100);
+    }
+
+    function eraseOne(){
+      if (userInput.length > 0) userInput.pop();
+      updateDisplayForInput();
+    }
+
+    function maybeAutoSubmit(){
+      if (!round) return;
+      if (userInput.length === round.sequence.length) submit(false);
+    }
+
+    function submit(auto=false){
+      if (!gameActive) return;
+      const expected = isReverse ? round.sequence.slice().reverse() : round.sequence;
+      const correct = userInput.length === expected.length && userInput.every((d,i)=>d===expected[i]);
+      clearInterval(questionTimer);
+      if (correct) {
+        safePlay(successSound);
+        statusEl.textContent = 'Correct!';
+        statusEl.className = 'status ok';
+        setTimeout(nextRound, 800);
+      } else {
+        statusEl.textContent = auto ? 'Time up!' : 'Wrong!';
+        statusEl.className = 'status fail';
+        setTimeout(()=>regenSameLevel(), 900);
+      }
+    }
+
+    function nextRound(){
+      if (!gameActive) return;
+      statusEl.textContent = '';
+      round = makeRound();
+      spanLabel.textContent = String(round.sequence.length);
+      showSequence(round.mode, round.sequence);
+    }
+
+    function regenSameLevel(){
+      if (!gameActive) return;
+      statusEl.textContent = '';
+      difficultyLevel -= 1; // keep same level
+      round = makeRound();
+      showSequence(round.mode, round.sequence);
+    }
+
+    function startTotalTimer(){
+      const clock = document.getElementById('totalClock');
+      clock.textContent = fmtTime(totalLeft);
+      clearInterval(totalTimer);
+      totalTimer = setInterval(()=>{
+        if (!gameActive) { clearInterval(totalTimer); return; }
+        totalLeft -= 1; if (totalLeft < 0) totalLeft = 0;
+        clock.textContent = fmtTime(totalLeft);
+        if (totalLeft === 0) {
+          clearInterval(totalTimer);
+          clearInterval(questionTimer);
+          gameActive = false;
+          statusEl.textContent = "Time's up for the game!";
+          statusEl.className = 'status fail';
+        }
+      }, 1000);
+    }
+
+    function startGame(reverse=false){
+      totalLeft = 180; gameActive = true; statusEl.textContent=''; statusEl.className='status';
+      isReverse = !!reverse;
+      difficultyLevel = 0; userInput = [];
+      renderKeypad();
+      round = makeRound();
+      showSequence(round.mode, round.sequence);
+      startTotalTimer();
+      safePlay(selectSound);
+    }
+
+    // Bindings
+    startBtn.addEventListener('click', ()=>startGame(false));
+    startReverseBtn.addEventListener('click', ()=>startGame(true));
+    window.addEventListener('keydown', (e)=>{
+      if (!gameActive) return;
+      if (e.key === 'Backspace') { eraseOne(); e.preventDefault(); return; }
+      if (/^[0-9]$/.test(e.key)) {
+        if (userInput.length < (round ? round.sequence.length : 0)) {
+          userInput.push(parseInt(e.key,10)); safePlay(selectSound); updateDisplayForInput(); maybeAutoSubmit();
+        }
+      }
+    });
+
+    // Tiny console tests
+    (function tests(){
+      function assert(name, cond){ if(!cond) console.warn('Test failed:', name); }
+      const r = { sequence:[1,2,3,4] };
+      userInput=[1,2,3,4]; assert('match ok', userInput.every((d,i)=>d===r.sequence[i]));
+      userInput=[1,2,3,5]; assert('mismatch', !userInput.every((d,i)=>d===r.sequence[i]));
+    })();
+  </script>
+</body>
+</html>
+
+
