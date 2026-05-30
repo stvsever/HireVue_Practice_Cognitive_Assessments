@@ -33,6 +33,9 @@
     .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
     .tile { background:#1f2937; border:2px solid #2b3547; border-radius:12px; padding:8px; cursor:pointer; user-select:none; display:flex; align-items:center; justify-content:center; position:relative; }
     .tile.selected { border-color: var(--accent); background:#243b66; }
+    .tile.reveal-correct { border-color: var(--ok); background: rgba(34,197,94,0.18); }
+    .tile.reveal-wrong { border-color: var(--bad); background: rgba(239,68,68,0.18); }
+    .tile.reveal-missed { border-color: var(--warn); background: rgba(234,179,8,0.18); }
     .tile canvas { width: 120px; height: 120px; }
     .tile .rot { display: inline-block; }
     .tile .spin { animation: spin 18s linear infinite; }
@@ -344,6 +347,16 @@
       let ok = expected.size === chosen.size;
       if (ok) for (const v of expected) if (!chosen.has(v)) { ok = false; break; }
       const rt = (performance.now() - state.roundStart)/1000;
+      // Reveal which tiles were matches so the rotation logic is legible.
+      for (let i = 0; i < state.options.length; i++) {
+        const el = els.grid.children[i]; if (!el) continue;
+        el.classList.remove('selected');
+        const isMatch = expected.has(i);
+        const picked  = chosen.has(i);
+        if (isMatch && picked)       el.classList.add('reveal-correct');
+        else if (isMatch && !picked) el.classList.add('reveal-missed');
+        else if (!isMatch && picked) el.classList.add('reveal-wrong');
+      }
       if (ok) {
         state.correct++; state.streak++;
         state.bestStreak = Math.max(state.bestStreak, state.streak);
@@ -361,13 +374,13 @@
       } else {
         beep(180, 0.18, 'square', 0.05);
         state.streak = 0;
-        els.status.textContent = 'Wrong — try a slower scan.';
+        els.status.textContent = 'Wrong. Green = matches you found · yellow = matches you missed · red = wrong pick.';
         els.status.className = 'status fail';
         setTimeout(() => {
           if (!state.active) return;
           state.level = Math.max(1, state.level - 1);
           buildRound(); render();
-        }, 900);
+        }, 1400);
       }
     }
 
