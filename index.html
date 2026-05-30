@@ -21,7 +21,9 @@
     .tag{color:var(--muted);font-size:15px;max-width:720px;margin:6px auto 0;text-align:center}
     .topbar{display:flex;align-items:center;gap:12px;margin-bottom:14px}
     .progress-wrap{flex:1;height:10px;background:#0a1018;border:1px solid var(--border);border-radius:999px;overflow:hidden}
-    .progress-bar{height:100%;width:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .1s linear}
+    .pz-tile.selected{outline:3px solid var(--accent);outline-offset:-3px;z-index:2;transform:scale(1.04)}
+    .pz-tile.correct::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 0 2px var(--ok);border-radius:4px;pointer-events:none}
+    .progress-bar{height:100%;width:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));will-change:width}
     .clock{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px;min-width:50px;text-align:right}
     .switch{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}.switch input{accent-color:var(--accent)}
     .meta-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap}
@@ -113,16 +115,12 @@
     .pz-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(11,15,23,.7);border-radius:10px;font-size:18px}
 
     /* Shapedance */
-    .sd-target-area{display:flex;gap:12px;align-items:center;justify-content:center;margin-bottom:12px}
-    .sd-target-tile{background:#101826;border:2px dashed #314161;border-radius:12px;padding:6px}
-    .sd-target-tile canvas{display:block;width:140px;height:140px}
-    .sd-target-label{font-size:12px;color:var(--muted);text-align:center;margin-bottom:4px}
     .sd-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
     .sd-tile{background:#1f2937;border:2px solid #2b3547;border-radius:12px;padding:8px;cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:center}
     .sd-tile.selected{border-color:var(--accent);background:#243b66}
     .sd-tile canvas{width:120px;height:120px}
     .sd-rot{display:inline-block}
-    .sd-spin{animation:sd-spin 10s linear infinite}
+    .sd-spin{animation:sd-spin 18s linear infinite}
     @keyframes sd-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 
     /* Singularity */
@@ -339,6 +337,32 @@ function gameShell({ id, title, subtitle, extraTop = '', mainHtml, helper }) {
     status: $('status'),
     actions: $('actions'),
   };
+}
+
+// Drive the progress bar with a single CSS transition matching the round budget.
+// No per-tick JS update => no jitter when intervals drift. Returns a stop() that
+// freezes the bar at its current visual width and a triggerOnEnd timer id you must
+// clear if you end the round early.
+function runProgressBar(host, seconds, onEnd) {
+  const el = host.progress;
+  // Snap to 100% with no transition, then transition to 0% over `seconds`.
+  el.style.transition = 'none';
+  el.style.width = '100%';
+  void el.offsetWidth; // force reflow so the next transition actually plays
+  el.style.transition = `width ${seconds}s linear`;
+  el.style.width = '0%';
+  const endTimer = setTimeout(() => { if (onEnd) onEnd(); }, seconds * 1000);
+  return () => {
+    clearTimeout(endTimer);
+    const cs = getComputedStyle(el);
+    el.style.transition = 'none';
+    el.style.width = cs.width; // freeze
+  };
+}
+function resetProgressBar(host) {
+  const el = host.progress;
+  el.style.transition = 'none';
+  el.style.width = '100%';
 }
 
 // Per-game total-timer helper
@@ -1197,7 +1221,7 @@ function gamePuzzle() {
         <div class="pz-board" id="board"><canvas id="boardBg"></canvas></div>
       </div>
     `,
-    helper:'Click a tile next to the gap to slide it.',
+    helper:'Click two tiles to swap them. Click the same tile twice to deselect. Correct tiles glow green.',
   });
   host.actions.innerHTML = `<button id="start" class="primary">Start Game</button><button id="reset">Reset</button><label class="switch"><input type="checkbox" id="hideRef"> Hide reference</label>`;
 
@@ -1246,21 +1270,26 @@ function gamePuzzle() {
   }
 
   let state = fresh();
-  function fresh(){return{active:false,level:1,maxLevel:1,score:0,solved:0,moves:0,n:3,slots:[],emptyIdx:0,seed:1,boardStart:0,rts:[],bigCanvas:null,memorising:false,memTimer:null};}
+  function fresh(){return{active:false,level:1,maxLevel:1,score:0,solved:0,moves:0,n:3,slots:[],selectedIdx:-1,seed:1,boardStart:0,rts:[],bigCanvas:null,memorising:false,stopBar:null};}
   function newPic() {
     const px=360; const c=document.createElement('canvas'); c.width=px; c.height=px;
     drawImg(c.getContext('2d'), px, state.seed); state.bigCanvas=c;
     preview.width=130; preview.height=130; preview.getContext('2d').drawImage(c,0,0,130,130);
   }
-  function neighbors(idx){const n=state.n,r=Math.floor(idx/n),c=idx%n,o=[];if(r>0)o.push(idx-n);if(r<n-1)o.push(idx+n);if(c>0)o.push(idx-1);if(c<n-1)o.push(idx+1);return o;}
   function swap(a,b){const t=state.slots[a];state.slots[a]=state.slots[b];state.slots[b]=t;}
-  function solved(){for(let i=0;i<state.slots.length-1;i++)if(state.slots[i]!==i)return false;return state.slots[state.slots.length-1]===-1;}
+  function solved(){for(let i=0;i<state.slots.length;i++)if(state.slots[i]!==i)return false;return true;}
+  function correctCount(){let c=0;for(let i=0;i<state.slots.length;i++)if(state.slots[i]===i)c++;return c;}
   function newPuzzle() {
     const {n}=spec(state.level); state.n=n; elG.textContent=n+'×'+n;
     state.seed=Math.floor(Math.random()*1e6); newPic();
-    state.slots=[]; for(let i=0;i<n*n-1;i++) state.slots.push(i); state.slots.push(-1); state.emptyIdx=n*n-1;
-    state.moves=0;
-    const scr=n*n*12; for (let k=0;k<scr;k++){const ng=neighbors(state.emptyIdx); const p=ng[R(0,ng.length-1)]; swap(state.emptyIdx,p); state.emptyIdx=p;}
+    state.slots=[]; for(let i=0;i<n*n;i++) state.slots.push(i);
+    state.selectedIdx=-1; state.moves=0;
+    // Fisher-Yates; reshuffle if already solved or too many tiles already in place
+    let guard=0;
+    do {
+      for (let i=state.slots.length-1;i>0;i--){ const j=R(0,i); swap(i,j); }
+      guard++;
+    } while ((solved() || correctCount() > Math.max(1, Math.floor(n*n*0.3))) && guard < 20);
     render();
   }
   function render() {
@@ -1272,18 +1301,20 @@ function gamePuzzle() {
     const big=state.bigCanvas;
     for (let i=0;i<n*n;i++) {
       const tid=state.slots[i]; const r=Math.floor(i/n),c=i%n;
-      const d=document.createElement('div'); d.className='pz-tile'+(tid===-1?' empty':'');
+      const d=document.createElement('div');
+      let cls='pz-tile';
+      if (i===state.selectedIdx) cls+=' selected';
+      if (tid===i) cls+=' correct';
+      d.className=cls;
       d.style.left=(c*tilePx+6)+'px'; d.style.top=(r*tilePx+6)+'px';
       d.style.width=tilePx+'px'; d.style.height=tilePx+'px';
-      if (tid!==-1) {
-        const cv=document.createElement('canvas'); cv.width=tilePx; cv.height=tilePx;
-        const cx=cv.getContext('2d'); const sr=Math.floor(tid/n),sc=tid%n; const ss=big.width/n;
-        cx.drawImage(big, sc*ss, sr*ss, ss, ss, 0, 0, tilePx, tilePx);
-        cx.fillStyle='rgba(0,0,0,.45)'; cx.fillRect(0,tilePx-18,22,18);
-        cx.fillStyle='#fff'; cx.font='bold 11px ui-sans-serif'; cx.textAlign='center'; cx.textBaseline='middle';
-        cx.fillText(String(tid+1), 11, tilePx-9);
-        d.appendChild(cv);
-      }
+      const cv=document.createElement('canvas'); cv.width=tilePx; cv.height=tilePx;
+      const cx=cv.getContext('2d'); const sr=Math.floor(tid/n),sc=tid%n; const ss=big.width/n;
+      cx.drawImage(big, sc*ss, sr*ss, ss, ss, 0, 0, tilePx, tilePx);
+      cx.fillStyle='rgba(0,0,0,.45)'; cx.fillRect(0,tilePx-18,22,18);
+      cx.fillStyle='#fff'; cx.font='bold 11px ui-sans-serif'; cx.textAlign='center'; cx.textBaseline='middle';
+      cx.fillText(String(tid+1), 11, tilePx-9);
+      d.appendChild(cv);
       d.addEventListener('click', ()=>onTile(i));
       board.appendChild(d);
     }
@@ -1291,18 +1322,23 @@ function gamePuzzle() {
   }
   function onTile(idx) {
     if (!state.active || state.memorising) return;
-    if (idx===state.emptyIdx) return;
-    const n=state.n; const r=Math.floor(idx/n),c=idx%n; const er=Math.floor(state.emptyIdx/n),ec=state.emptyIdx%n;
-    if (Math.abs(r-er)+Math.abs(c-ec)!==1) return;
-    swap(idx,state.emptyIdx); state.emptyIdx=idx; state.moves++; beep(580,.04);
+    if (state.selectedIdx === -1) {
+      state.selectedIdx = idx; beep(440,.03);
+      render(); return;
+    }
+    if (state.selectedIdx === idx) {
+      state.selectedIdx = -1; render(); return;
+    }
+    swap(idx, state.selectedIdx);
+    state.selectedIdx = -1; state.moves++; beep(580,.04);
     render();
     if (solved()) onSolved();
   }
   function onSolved() {
     const rt=(performance.now()-state.boardStart)/1000; state.rts.push(rt); beep(900,.18);
     state.solved++;
-    const minMoves = state.n*state.n*4;
-    const mp = Math.max(.4, 1 - Math.max(0, state.moves - minMoves)*.005);
+    const minMoves = state.n*state.n;
+    const mp = Math.max(.4, 1 - Math.max(0, state.moves - minMoves)*.01);
     const sb = Math.max(.4, 1.6 - rt/60);
     const pts = Math.round(300 * state.level * sb * mp);
     state.score += pts;
@@ -1315,13 +1351,14 @@ function gamePuzzle() {
     newPuzzle(); state.memorising=true;
     host.status.textContent='Memorise the reference…'; host.status.className='status';
     const o=document.createElement('div'); o.className='pz-overlay'; o.textContent='Memorise…'; board.appendChild(o);
-    const ms=spec(state.level).memMs; let t=ms; host.progress.style.width='100%';
-    clearInterval(state.memTimer);
-    state.memTimer = setInterval(()=>{ if (!state.active){clearInterval(state.memTimer);return;} t-=100; if(t<0)t=0;
-      host.progress.style.width=(t/ms*100)+'%'; if (t===0){clearInterval(state.memTimer); o.remove();
-        state.memorising=false; state.boardStart=performance.now();
-        previewWrap.style.visibility = $('hideRef').checked ? 'hidden' : 'visible';
-        host.status.textContent='Solve it!'; } }, 100);
+    const ms=spec(state.level).memMs;
+    if (state.stopBar) state.stopBar();
+    state.stopBar = runProgressBar(host, ms/1000, ()=>{
+      if (!state.active) return;
+      o.remove(); state.memorising=false; state.boardStart=performance.now();
+      previewWrap.style.visibility = $('hideRef').checked ? 'hidden' : 'visible';
+      host.status.textContent='Solve it!';
+    });
   }
   let stopTotal = null;
   function startGame() {
@@ -1330,7 +1367,7 @@ function gamePuzzle() {
     startTrial(); $('start').textContent='Restart';
   }
   function endGame() {
-    state.active=false; if (stopTotal) stopTotal(); clearInterval(state.memTimer);
+    state.active=false; if (stopTotal) stopTotal(); if (state.stopBar) state.stopBar();
     const sorted=state.rts.slice().sort((a,b)=>a-b); const med=sorted.length?sorted[Math.floor(sorted.length/2)]:null;
     const isPb = saveRun('puzzle', { score: state.score, level: state.maxLevel, solved: state.solved, accuracy: state.solved>0?1:0, rtMedian: med });
     const sz = spec(state.maxLevel).n;
@@ -1342,14 +1379,14 @@ function gamePuzzle() {
     ], isPb);
   }
   $('start').addEventListener('click', startGame);
-  $('reset').addEventListener('click', ()=>{ state.active=false; if (stopTotal) stopTotal(); clearInterval(state.memTimer); state=fresh();
+  $('reset').addEventListener('click', ()=>{ state.active=false; if (stopTotal) stopTotal(); if (state.stopBar) state.stopBar(); state=fresh();
     [...board.querySelectorAll('.pz-tile')].forEach(t=>t.remove());
     boardBg.getContext('2d').clearRect(0,0,boardBg.width,boardBg.height);
     preview.getContext('2d').clearRect(0,0,preview.width,preview.height);
     elL.textContent='1'; elS.textContent='0'; elM.textContent='0'; elSv.textContent='0';
     elG.textContent='3×3'; host.status.textContent='';
-    host.totalClock.textContent=fmtTime(TOTAL); host.progress.style.width='100%'; $('start').textContent='Start Game'; });
-  currentTeardown = () => { state.active=false; if (stopTotal) stopTotal(); clearInterval(state.memTimer); };
+    host.totalClock.textContent=fmtTime(TOTAL); resetProgressBar(host); $('start').textContent='Start Game'; });
+  currentTeardown = () => { state.active=false; if (stopTotal) stopTotal(); if (state.stopBar) state.stopBar(); };
 }
 
 // ============================================================
@@ -1358,7 +1395,7 @@ function gamePuzzle() {
 function gameShapedance() {
   const host = gameShell({
     id:'shapedance', title:'Shapedance',
-    subtitle:'Select all tiles matching the target. Rotation does not change identity.',
+    subtitle:'Find every tile that matches another. Rotation does not change identity.',
     extraTop:`
       <div class="meta-row">
         <div>
@@ -1368,18 +1405,12 @@ function gameShapedance() {
         </div>
         <div><span class="chip">Grid <b id="gridChip">2×2</b></span></div>
       </div>
-      <div class="sd-target-area">
-        <div>
-          <div class="sd-target-label">Target</div>
-          <div class="sd-target-tile"><canvas id="target"></canvas></div>
-        </div>
-      </div>
     `,
     mainHtml:`<div class="sd-grid" id="grid"></div>`,
-    helper:'Select every match — partial credit is not given. Some tiles spin; ignore motion.',
+    helper:'One pattern appears multiple times (possibly rotated). Select all of its copies; partial credit is not given. Ignore spinning motion.',
   });
   host.actions.innerHTML = `<button id="start" class="primary">Start Game</button><button id="compare">Compare</button><button id="reset">Reset</button>`;
-  const target=$('target'); const grid=$('grid');
+  const grid=$('grid');
   const elL=$('lvl'),elS=$('score'),elSt=$('streak'),elG=$('gridChip');
   const COL=['#ef4444','#2f81f7','#eab308','#22c55e'];
 
@@ -1439,26 +1470,30 @@ function gameShapedance() {
   }
 
   let state = fresh();
-  function fresh(){return{active:false,level:1,maxLevel:1,score:0,streak:0,bestStreak:0,correct:0,attempted:0,target:null,options:null,correctSet:null,selected:new Set(),roundStart:0,qTimer:null};}
+  function fresh(){return{active:false,level:1,maxLevel:1,score:0,streak:0,bestStreak:0,correct:0,attempted:0,options:null,correctSet:null,selected:new Set(),roundStart:0,stopBar:null};}
   function build() {
-    const s=spec(state.level); state.target=randomGrid(s.size);
+    const s=spec(state.level);
+    const matchPattern = randomGrid(s.size);
     const tiles=s.tiles; const minM=2; const maxM=Math.max(minM,Math.floor(tiles/2)+1); const numM=minM+R(0,maxM-minM);
     const numD=tiles-numM;
     const opts=[];
-    for (let i=0;i<numM;i++) opts.push({grid:state.target, rotate:R(0,3)*90, spin:Math.random()<s.spinP});
+    for (let i=0;i<numM;i++) opts.push({grid:matchPattern, rotate:R(0,3)*90, spin:Math.random()<s.spinP, isMatch:true});
+    // distractors must not match each other or the matchPattern (mod rotation)
+    const seen = [matchPattern];
     let g=0;
-    while (opts.filter(o=>!eqRot(state.target,o.grid)).length<numD && g<200) {
-      g++; const c=mutate(state.target, s.mutI); if (eqRot(state.target,c)) continue;
-      opts.push({grid:c, rotate:R(0,3)*90, spin:Math.random()<s.spinP});
+    while (opts.filter(o=>!o.isMatch).length<numD && g<400) {
+      g++; const c=mutate(matchPattern, s.mutI);
+      if (seen.some(x => eqRot(x, c))) continue;
+      seen.push(c);
+      opts.push({grid:c, rotate:R(0,3)*90, spin:Math.random()<s.spinP, isMatch:false});
     }
     for (let i=opts.length-1;i>0;i--){const j=R(0,i);[opts[i],opts[j]]=[opts[j],opts[i]];}
     state.options=opts;
-    state.correctSet=new Set(opts.map((o,i)=>eqRot(state.target,o.grid)?i:-1).filter(i=>i!==-1));
+    state.correctSet=new Set(opts.map((o,i)=>o.isMatch?i:-1).filter(i=>i!==-1));
     state.selected=new Set();
     elG.textContent=s.size+'×'+s.size;
   }
   function render() {
-    target.width=160; target.height=160; drawP(target.getContext('2d'), state.target);
     grid.innerHTML='';
     state.options.forEach((opt,idx)=>{
       const tile=document.createElement('div'); tile.className='sd-tile';
@@ -1479,7 +1514,8 @@ function gameShapedance() {
   }
   function compare() {
     if (!state.active) return;
-    clearInterval(state.qTimer); state.attempted++;
+    if (state.stopBar) { state.stopBar(); state.stopBar = null; }
+    state.attempted++;
     let ok = state.correctSet.size===state.selected.size;
     if (ok) for (const v of state.correctSet) if (!state.selected.has(v)) { ok=false; break; }
     const rt=(performance.now()-state.roundStart)/1000;
@@ -1487,20 +1523,18 @@ function gameShapedance() {
       state.correct++; state.streak++; state.bestStreak=Math.max(state.bestStreak,state.streak); beep(900,.12);
       const sb=Math.max(.5,1.4-rt/22); const pts=Math.round(150*state.level*sb*(1+Math.min(state.streak,9)*.04));
       state.score+=pts; host.status.textContent=`Correct! +${pts}`; host.status.className='status ok';
-      // Shapedance: bump every correct until L4, then need streak of 2; cap 16.
       setTimeout(()=>{ if (!state.active) return;
         if (state.level < 4 || state.streak >= 2) { state.level = Math.min(16, state.level + 1); state.maxLevel = Math.max(state.maxLevel, state.level); }
         build(); render(); }, 700);
     } else {
-      beep(180,.18,'square'); state.streak=0; host.status.textContent='Wrong — try a slower scan.'; host.status.className='status fail';
+      beep(180,.18,'square'); state.streak=0; host.status.textContent='Wrong, try a slower scan.'; host.status.className='status fail';
       setTimeout(()=>{ if (!state.active) return; state.level=Math.max(1,state.level-1); build(); render(); }, 900);
     }
   }
   function startQTimer() {
-    const budget=Math.max(15,35-state.level*1.2); let t=budget;
-    host.progress.style.width='100%'; clearInterval(state.qTimer);
-    state.qTimer=setInterval(()=>{ if (!state.active){clearInterval(state.qTimer);return;} t-=.1; if(t<0)t=0;
-      host.progress.style.width=(t/budget*100)+'%'; if (t===0){clearInterval(state.qTimer); compare();} },100);
+    const budget=Math.max(15,35-state.level*1.2);
+    if (state.stopBar) state.stopBar();
+    state.stopBar = runProgressBar(host, budget, ()=>{ if (state.active) compare(); });
   }
   let stopTotal = null;
   function startGame() {
@@ -1508,7 +1542,7 @@ function gameShapedance() {
     stopTotal=makeTotalTimer(host, ()=>state.active, endGame); $('start').textContent='Restart';
   }
   function endGame() {
-    state.active=false; clearInterval(state.qTimer); if (stopTotal) stopTotal();
+    state.active=false; if (state.stopBar) state.stopBar(); if (stopTotal) stopTotal();
     const acc=state.attempted?state.correct/state.attempted:0;
     const isPb=saveRun('shapedance', { score: state.score, level: state.maxLevel, accuracy: acc, correct: state.correct, attempted: state.attempted, streak: state.bestStreak });
     showModal('Shapedance — session complete', [
@@ -1521,11 +1555,11 @@ function gameShapedance() {
   }
   $('start').addEventListener('click', startGame);
   $('compare').addEventListener('click', compare);
-  $('reset').addEventListener('click', ()=>{ state.active=false; clearInterval(state.qTimer); if (stopTotal) stopTotal(); state=fresh();
-    grid.innerHTML=''; host.status.textContent=''; target.getContext('2d').clearRect(0,0,target.width,target.height);
+  $('reset').addEventListener('click', ()=>{ state.active=false; if (state.stopBar) state.stopBar(); if (stopTotal) stopTotal(); state=fresh();
+    grid.innerHTML=''; host.status.textContent='';
     elL.textContent='1'; elS.textContent='0'; elSt.textContent='0'; elG.textContent='2×2';
-    host.totalClock.textContent=fmtTime(TOTAL); host.progress.style.width='100%'; $('start').textContent='Start Game'; });
-  currentTeardown = () => { state.active=false; clearInterval(state.qTimer); if (stopTotal) stopTotal(); };
+    host.totalClock.textContent=fmtTime(TOTAL); resetProgressBar(host); $('start').textContent='Start Game'; });
+  currentTeardown = () => { state.active=false; if (state.stopBar) state.stopBar(); if (stopTotal) stopTotal(); };
 }
 
 // ============================================================
@@ -1639,35 +1673,53 @@ function gameSingularity() {
     if (l<=12){const pal=nearPal(); return{ n:7, p:{forms:cluster(), colors:[pal[2]], fills:FILLS}, ax:['fill'], spin:.50, drift:.25 };}
     if (l<=14){const pal=nearPal(); return{ n:7, p:{forms:[pick(cluster())], colors:[pal[2]], fills:['solid','dot','outline','half-top']}, ax:['fill'], spin:.55, drift:.30 };}
     if (l<=16){const pal=nearPal(); return{ n:8, p:{forms:[pick(cluster())], colors:[pal[2]], fills:['solid','dot','outline','half-top','half-bottom']}, ax:['fill'], spin:.60, drift:.30 };}
-    // Endgame: 8×8 = 64 nearly-identical shapes, one differs on fill alone.
-    {const pal=nearPal(); return{ n:8, p:{forms:[pick(cluster())], colors:[pal[2]], fills:FILLS}, ax:['fill'], spin:.65, drift:.35 };}
+    if (l<=20){const pal=nearPal(); return{ n:8, p:{forms:[pick(cluster())], colors:[pal[2]], fills:FILLS}, ax:['fill'], spin:.65, drift:.35 };}
+    if (l<=25){const pal=nearPal(); return{ n:9, p:{forms:[pick(cluster())], colors:[pal[2]], fills:FILLS}, ax:['fill'], spin:.70, drift:.40 };}
+    // L26-30: 9×9 = 81 nearly identical tiles, fill-only difference, max motion noise.
+    {const pal=nearPal(); return{ n:9, p:{forms:[pick(cluster())], colors:[pal[2]], fills:FILLS}, ax:['fill'], spin:.80, drift:.45 };}
   }
 
+  // Forms whose visual is invariant under any 90° rotation
+  const ROTATION_SYMMETRIC = new Set(['circle','square','diamond','plus','hexagon']);
+  // Fills that break under 180° rotation (half-top ↔ half-bottom)
+  const ROTATION_BREAKING_FILL = new Set(['half-top','half-bottom']);
+  function safeRotation(shape, allowRotate) {
+    if (!allowRotate) return 0;
+    if (ROTATION_BREAKING_FILL.has(shape.fill)) return 0;
+    if (ROTATION_SYMMETRIC.has(shape.form))    return 0;
+    return R(0,3) * 90;
+  }
+
+  const MAX_LEVEL = 30;
+  const START_LEVEL = 4;
+
   let state = fresh();
-  function fresh(){return{active:false,level:1,maxLevel:1,score:0,streak:0,bestStreak:0,correct:0,attempted:0,rts:[],round:null,uniqueIdx:-1,roundStart:0,qTimer:null};}
+  function fresh(){return{active:false,level:START_LEVEL,maxLevel:START_LEVEL,score:0,streak:0,bestStreak:0,correct:0,attempted:0,rts:[],round:null,uniqueIdx:-1,roundStart:0,stopBar:null};}
   function build() {
     const sp = spec(state.level); const n = sp.n, total = n*n;
-    // Resolve axis pool — drop axes whose pool is too small to differ.
     const allowed = sp.ax.filter(a => sp.p[a+'s'].length >= 2);
     const safeAllowed = allowed.length ? allowed : ['fill'];
     let base = mkBase(sp.p);
     let u = mkUnique(base, sp.p, safeAllowed);
     let guard = 0;
     while ((!u || sEq(base, u)) && guard++ < 100) {
-      // Pool too small or unlucky pick — try a different base.
       base = mkBase(sp.p);
       u = mkUnique(base, sp.p, safeAllowed);
     }
-    if (!u) u = { ...base, fill: pick(FILLS.filter(f => f !== base.fill)) || 'outline' };
+    if (!u || sEq(base, u)) {
+      // Hard fallback: force a different form (most visually obvious).
+      const otherForms = FORMS.filter(f => f !== base.form);
+      if (otherForms.length) u = { ...base, form: pick(otherForms) };
+      else u = { ...base, fill: pick(FILLS.filter(f => f !== base.fill)) || 'outline' };
+    }
     const cells = [];
     const uniqueAt = R(0, total - 1);
-    // Decide whether rotation should be heterogeneous (looks busier).
-    // At high levels every tile has a random rotation so rotation can't anchor scanning.
-    const rotateEach = state.level >= 3;
+    const allowRotate = state.level >= 5; // delay rotation noise slightly
     for (let i = 0; i < total; i++) {
+      const shape = i === uniqueAt ? u : base;
       cells.push({
-        shape: i === uniqueAt ? u : base,
-        rotate: rotateEach ? R(0, 3) * 90 : 0,
+        shape,
+        rotate: safeRotation(shape, allowRotate),
         spin: Math.random() < sp.spin,
         drift: Math.random() < sp.drift,
       });
@@ -1692,7 +1744,8 @@ function gameSingularity() {
   }
   function onClick(idx) {
     if (!state.active) return;
-    clearInterval(state.qTimer); state.attempted++;
+    if (state.stopBar) { state.stopBar(); state.stopBar = null; }
+    state.attempted++;
     const rt=(performance.now()-state.roundStart)/1000;
     const cell=field.children[idx];
     if (idx===state.uniqueIdx) {
@@ -1701,29 +1754,29 @@ function gameSingularity() {
       const sb=Math.max(.4, 1.6 - rt/8);
       const pts=Math.round(100*state.level*sb*(1+Math.min(state.streak,9)*.05));
       state.score+=pts; host.status.textContent=`Correct! +${pts} (${rt.toFixed(1)}s)`; host.status.className='status ok';
-      // Bump level on EVERY correct answer until L6, then require streak of 2.
-      // Keeps the easy phase short — you hit the hard part fast.
-      if (state.level < 6 || state.streak >= 2) {
-        state.level = Math.min(25, state.level + 1);
+      if (state.level < 8 || state.streak >= 2) {
+        state.level = Math.min(MAX_LEVEL, state.level + 1);
         state.maxLevel = Math.max(state.maxLevel, state.level);
       }
       setTimeout(()=>{ if (state.active){build(); render();} }, 600);
     } else {
       cell.classList.add('wrong'); field.children[state.uniqueIdx].classList.add('right');
       beep(180,.18,'square'); state.streak=0;
-      host.status.textContent='Wrong — that wasn\'t the unique one.'; host.status.className='status fail';
+      host.status.textContent='Wrong, that was not the unique one.'; host.status.className='status fail';
       setTimeout(()=>{ if (!state.active) return; state.level=Math.max(1,state.level-1); build(); render(); }, 900);
     }
   }
   function startQTimer() {
-    const budget=Math.max(8, 25 - state.level*.9); let t=budget;
-    host.progress.style.width='100%'; clearInterval(state.qTimer);
-    state.qTimer=setInterval(()=>{ if (!state.active){clearInterval(state.qTimer);return;} t-=.1; if(t<0)t=0;
-      host.progress.style.width=(t/budget*100)+'%';
-      if (t===0){ clearInterval(state.qTimer); state.attempted++; state.streak=0;
-        host.status.textContent='Time up!'; host.status.className='status fail';
-        field.children[state.uniqueIdx].classList.add('right');
-        setTimeout(()=>{ if (state.active){state.level=Math.max(1,state.level-1); build(); render();} }, 900); } },100);
+    // 24s @ L1, down to ~4s @ L30
+    const budget=Math.max(4, 26 - state.level*.75);
+    if (state.stopBar) state.stopBar();
+    state.stopBar = runProgressBar(host, budget, ()=>{
+      if (!state.active) return;
+      state.stopBar = null; state.attempted++; state.streak=0;
+      host.status.textContent='Time up!'; host.status.className='status fail';
+      field.children[state.uniqueIdx].classList.add('right');
+      setTimeout(()=>{ if (state.active){state.level=Math.max(1,state.level-1); build(); render();} }, 900);
+    });
   }
   let stopTotal = null;
   function startGame() {
@@ -1731,7 +1784,7 @@ function gameSingularity() {
     stopTotal=makeTotalTimer(host, ()=>state.active, endGame); $('start').textContent='Restart';
   }
   function endGame() {
-    state.active=false; clearInterval(state.qTimer); if (stopTotal) stopTotal();
+    state.active=false; if (state.stopBar) state.stopBar(); if (stopTotal) stopTotal();
     const acc=state.attempted?state.correct/state.attempted:0;
     const sorted=state.rts.slice().sort((a,b)=>a-b); const med=sorted.length?sorted[Math.floor(sorted.length/2)]:null;
     const isPb=saveRun('singularity', { score: state.score, level: state.maxLevel, accuracy: acc, correct: state.correct, attempted: state.attempted, rtMedian: med });
@@ -1744,10 +1797,14 @@ function gameSingularity() {
     ], isPb);
   }
   $('start').addEventListener('click', startGame);
-  $('reset').addEventListener('click', ()=>{ state.active=false; clearInterval(state.qTimer); if (stopTotal) stopTotal(); state=fresh();
-    field.innerHTML=''; host.status.textContent=''; elL.textContent='1'; elS.textContent='0'; elSt.textContent='0'; elT.textContent='9';
-    host.totalClock.textContent=fmtTime(TOTAL); host.progress.style.width='100%'; $('start').textContent='Start Game'; });
-  currentTeardown = () => { state.active=false; clearInterval(state.qTimer); if (stopTotal) stopTotal(); };
+  $('reset').addEventListener('click', ()=>{ state.active=false; if (state.stopBar) state.stopBar(); if (stopTotal) stopTotal(); state=fresh();
+    field.innerHTML=''; host.status.textContent='';
+    elL.textContent=String(START_LEVEL); elS.textContent='0'; elSt.textContent='0';
+    elT.textContent=String(spec(START_LEVEL).n * spec(START_LEVEL).n);
+    host.totalClock.textContent=fmtTime(TOTAL); resetProgressBar(host); $('start').textContent='Start Game'; });
+  // Show the starting chip values right away.
+  elL.textContent=String(START_LEVEL); elT.textContent=String(spec(START_LEVEL).n * spec(START_LEVEL).n);
+  currentTeardown = () => { state.active=false; if (state.stopBar) state.stopBar(); if (stopTotal) stopTotal(); };
 }
 
 // ---------- boot ----------
