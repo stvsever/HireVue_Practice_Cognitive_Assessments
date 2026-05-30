@@ -184,20 +184,32 @@
     }
 
     // ------ Difficulty ladder ------
-    // Beyond HireVue: 3-pick comes earlier, larger products, mixed operations,
-    // and ÷ with non-trivial divisors.
+    // Steep ramp far past HireVue: 2-pick basics done by L4, mixed-op 2-pick by
+    // L5, 3-pick by L6, mixed 3-pick by L9, 4-pick by L12, 5-pick by L20.
     function spec(lvl) {
-      // Ladder spec
-      if (lvl <= 2)   return { op: 'add', count: 2, range: [2, 12] };
-      if (lvl <= 4)   return { op: 'sub', count: 2, range: [3, 20] };
-      if (lvl <= 6)   return { op: 'mul', count: 2, range: [2, 9] };
-      if (lvl <= 8)   return { op: 'div', count: 2, range: [2, 10] };
-      if (lvl <= 10)  return { op: 'add', count: 3, range: [2, 15] };
-      if (lvl <= 12)  return { op: 'sub', count: 3, range: [3, 25] };
-      if (lvl <= 15)  return { op: 'mul', count: 2, range: [3, 12] };
-      if (lvl <= 18)  return { op: 'mul', count: 3, range: [2, 8] };
-      if (lvl <= 21)  return { op: 'mix2', count: 2, range: [3, 20] }; // random op
-      return { op: 'mix3', count: 3, range: [3, 15] };
+      if (lvl <= 1)   return { op: 'add',  count: 2, range: [3, 15] };
+      if (lvl <= 2)   return { op: 'sub',  count: 2, range: [4, 22] };
+      if (lvl <= 3)   return { op: 'mul',  count: 2, range: [2, 9]  };
+      if (lvl <= 4)   return { op: 'div',  count: 2, range: [2, 12] };
+      if (lvl <= 5)   return { op: 'mix2', count: 2, range: [3, 18] };
+      if (lvl <= 6)   return { op: 'add',  count: 3, range: [3, 20] };
+      if (lvl <= 7)   return { op: 'sub',  count: 3, range: [4, 28] };
+      if (lvl <= 8)   return { op: 'mul',  count: 3, range: [2, 10] };
+      if (lvl <= 9)   return { op: 'mix3', count: 3, range: [3, 22] };
+      if (lvl <= 10)  return { op: 'mix2', count: 2, range: [6, 40] };
+      if (lvl <= 11)  return { op: 'mix3', count: 3, range: [5, 30] };
+      if (lvl <= 12)  return { op: 'add',  count: 4, range: [4, 25] };
+      if (lvl <= 13)  return { op: 'sub',  count: 4, range: [5, 30] };
+      if (lvl <= 14)  return { op: 'mul',  count: 4, range: [2, 8]  };
+      if (lvl <= 15)  return { op: 'mix2', count: 2, range: [10, 60]};
+      if (lvl <= 16)  return { op: 'mix3', count: 3, range: [6, 45] };
+      if (lvl <= 18)  return { op: 'mix3', count: 4, range: [4, 30] };
+      if (lvl <= 20)  return { op: 'add',  count: 5, range: [3, 25] };
+      if (lvl <= 22)  return { op: 'sub',  count: 5, range: [4, 35] };
+      if (lvl <= 24)  return { op: 'mix3', count: 4, range: [6, 40] };
+      if (lvl <= 26)  return { op: 'mix3', count: 5, range: [3, 30] };
+      if (lvl <= 28)  return { op: 'mul',  count: 4, range: [2, 12] };
+      return { op: 'mix3', count: 5, range: [6, 45] };
     }
 
     function pickOp() { return ['add','sub','mul','div'][Math.floor(Math.random()*4)]; }
@@ -265,15 +277,17 @@
         return false;
       }
 
+      // Keep ~2-3 distractors regardless of pick count.
+      const tileCount = count >= 5 ? 8 : (count >= 4 ? 7 : 6);
       let guard = 0;
-      while (tiles.length < 6 && guard < 400) {
+      while (tiles.length < tileCount && guard < 400) {
         guard++;
         const c = R(lo, hi);
         if (isCheatable(c)) continue;
         if (add3Cheat(c)) continue;
         tiles.push(c);
       }
-      while (tiles.length < 6) tiles.push(R(lo, hi));
+      while (tiles.length < tileCount) tiles.push(R(lo, hi));
 
       // shuffle
       for (let i = tiles.length - 1; i > 0; i--) {
