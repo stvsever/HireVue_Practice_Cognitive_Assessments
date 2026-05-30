@@ -690,23 +690,24 @@ function gameDigitspan() {
 
   function renderKeypad() {
     keypad.innerHTML='';
-    let cols = 3;
+    let cols = 4;
     const keys = [];
     if (opts.charset==='digits') {
+      // 0-9 + ⏎ = 11 keys, 3 wide
+      cols = 3;
       for (const c of '123456789') keys.push({label:c,val:c});
       keys.push({label:'0',val:'0'});
-      keys.push({label:'⌫',val:'back',special:true});
       keys.push({label:'⏎',val:'enter',special:true});
     } else if (opts.charset==='letters') {
-      cols = 5;
+      // 15 letters + ⏎ = 16 keys, exact 4×4 grid
+      cols = 4;
       for (const L of 'ABCDEFGHIJKLMNO') keys.push({label:L,val:L});
-      keys.push({label:'⌫',val:'back',special:true});
       keys.push({label:'⏎',val:'enter',special:true});
     } else {
+      // 10 digits + 15 letters + ⏎ = 26 keys
       cols = 5;
       for (const c of '1234567890') keys.push({label:c,val:c});
       for (const L of 'ABCDEFGHIJKLMNO') keys.push({label:L,val:L});
-      keys.push({label:'⌫',val:'back',special:true});
       keys.push({label:'⏎',val:'enter',special:true});
     }
     keypad.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;

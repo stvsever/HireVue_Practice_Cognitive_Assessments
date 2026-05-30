@@ -243,17 +243,17 @@
     function renderKeypad() {
       els.keypad.innerHTML = '';
       const keys = [];
-      let cols = 3;
+      let cols = 4;
       if (opts.charset === 'digits') {
+        cols = 3;
         ['1','2','3','4','5','6','7','8','9'].forEach(d => keys.push({ label: d, val: d }));
         keys.push({ label: '0', val: '0' });
-        keys.push({ label: '⌫', val: 'back', special: true });
         keys.push({ label: '⏎', val: 'enter', special: true });
       } else if (opts.charset === 'letters') {
-        cols = 5;
+        // 15 letters + ⏎ = 16 keys, exact 4×4 grid
+        cols = 4;
         const letters = 'ABCDEFGHIJKLMNO';
         for (const L of letters) keys.push({ label: L, val: L });
-        keys.push({ label: '⌫', val: 'back', special: true });
         keys.push({ label: '⏎', val: 'enter', special: true });
       } else {
         // mixed: digits + letters
@@ -261,7 +261,6 @@
         ['1','2','3','4','5','6','7','8','9','0'].forEach(d => keys.push({ label: d, val: d }));
         const letters = 'ABCDEFGHIJKLMNO';
         for (const L of letters) keys.push({ label: L, val: L });
-        keys.push({ label: '⌫', val: 'back', special: true });
         keys.push({ label: '⏎', val: 'enter', special: true });
       }
       els.keypad.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
