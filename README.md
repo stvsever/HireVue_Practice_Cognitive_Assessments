@@ -7,7 +7,7 @@
 > arrive over-prepared.
 
 <p align="center">
-  <em>⭐ If this helped you land an interview, please star the repo. It's the only signal that tells me to keep maintaining it.</em>
+  <em>⭐ If this helped you land an interview, please star the repo.</em>
 </p>
 
 ---
@@ -22,8 +22,7 @@
 - 🌐 **Deployable as a static site** (GitHub Pages, Netlify, S3, anything).
 
 > ℹ️ Personality / emotional games (Portrait, PortraitXT, E-Motions, TeamChat)
-> are intentionally omitted: those measure self-report style, not ability,
-> and are not improved by practice.
+> are intentionally omitted.
 
 ---
 
