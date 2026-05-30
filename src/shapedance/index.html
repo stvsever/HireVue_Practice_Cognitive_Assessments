@@ -262,7 +262,7 @@
       const matchPattern = randomGrid(s.size);
       const tiles = s.tiles;
       const minMatch = 2;
-      const maxMatch = Math.max(minMatch, Math.floor(tiles/2)+1);
+      const maxMatch = Math.min(3, Math.max(minMatch, Math.floor(tiles/2)+1));
       const numMatch = minMatch + Math.floor(Math.random()*(maxMatch-minMatch+1));
       const numDistr = tiles - numMatch;
 
@@ -331,10 +331,13 @@
       if (!state.active) return;
       const el = els.grid.children[idx];
       if (state.selected.has(idx)) {
-        state.selected.delete(idx); el.classList.remove('selected');
-      } else {
-        state.selected.add(idx); el.classList.add('selected');
-        beep(700, 0.04, 'triangle', 0.04);
+        state.selected.delete(idx); el.classList.remove('selected'); return;
+      }
+      state.selected.add(idx); el.classList.add('selected');
+      beep(700, 0.04, 'triangle', 0.04);
+      // Auto-evaluate once you've picked the expected number of matches.
+      if (state.correctSet && state.selected.size >= state.correctSet.size) {
+        compare();
       }
     }
 
@@ -370,17 +373,17 @@
           if (!state.active) return;
           if (state.streak >= 2) { state.level++; state.maxLevel = Math.max(state.maxLevel, state.level); }
           buildRound(); render();
-        }, 700);
+        }, 350);
       } else {
         beep(180, 0.18, 'square', 0.05);
         state.streak = 0;
-        els.status.textContent = 'Wrong. Green = matches you found · yellow = matches you missed · red = wrong pick.';
+        els.status.textContent = 'Wrong. Green = found · yellow = missed · red = wrong pick.';
         els.status.className = 'status fail';
         setTimeout(() => {
           if (!state.active) return;
           state.level = Math.max(1, state.level - 1);
           buildRound(); render();
-        }, 1400);
+        }, 800);
       }
     }
 

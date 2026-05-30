@@ -1475,7 +1475,8 @@ function gameShapedance() {
   function build() {
     const s=spec(state.level);
     const matchPattern = randomGrid(s.size);
-    const tiles=s.tiles; const minM=2; const maxM=Math.max(minM,Math.floor(tiles/2)+1); const numM=minM+R(0,maxM-minM);
+    const tiles=s.tiles; const minM=2; const maxM=Math.min(3, Math.max(minM,Math.floor(tiles/2)+1));
+    const numM=minM+R(0,maxM-minM);
     const numD=tiles-numM;
     const opts=[];
     for (let i=0;i<numM;i++) opts.push({grid:matchPattern, rotate:R(0,3)*90, spin:Math.random()<s.spinP, isMatch:true});
@@ -1510,8 +1511,12 @@ function gameShapedance() {
   function toggle(i) {
     if (!state.active) return;
     const el=grid.children[i];
-    if (state.selected.has(i)) { state.selected.delete(i); el.classList.remove('selected'); }
-    else { state.selected.add(i); el.classList.add('selected'); beep(700,.04,'triangle',.04); }
+    if (state.selected.has(i)) { state.selected.delete(i); el.classList.remove('selected'); return; }
+    state.selected.add(i); el.classList.add('selected'); beep(700,.04,'triangle',.04);
+    // Auto-evaluate as soon as you have picked the expected number of matches.
+    if (state.correctSet && state.selected.size >= state.correctSet.size) {
+      compare();
+    }
   }
   function compare() {
     if (!state.active) return;
@@ -1536,12 +1541,12 @@ function gameShapedance() {
       state.score+=pts; host.status.textContent=`Correct! +${pts}`; host.status.className='status ok';
       setTimeout(()=>{ if (!state.active) return;
         if (state.level < 4 || state.streak >= 2) { state.level = Math.min(16, state.level + 1); state.maxLevel = Math.max(state.maxLevel, state.level); }
-        build(); render(); }, 700);
+        build(); render(); }, 350);
     } else {
       beep(180,.18,'square'); state.streak=0;
-      host.status.textContent='Wrong. Green = matches you found · yellow = matches you missed · red = wrong pick.';
+      host.status.textContent='Wrong. Green = found · yellow = missed · red = wrong pick.';
       host.status.className='status fail';
-      setTimeout(()=>{ if (!state.active) return; state.level=Math.max(1,state.level-1); build(); render(); }, 1400);
+      setTimeout(()=>{ if (!state.active) return; state.level=Math.max(1,state.level-1); build(); render(); }, 800);
     }
   }
   function startQTimer() {
