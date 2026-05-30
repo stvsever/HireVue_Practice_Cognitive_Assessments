@@ -1404,15 +1404,18 @@ function gameShapedance() {
           <span class="chip">Score <b id="score">0</b></span>
           <span class="chip">Streak <b id="streak">0</b></span>
         </div>
-        <div><span class="chip">Grid <b id="gridChip">2×2</b></span></div>
+        <div>
+          <span class="chip">Grid <b id="gridChip">2×2</b></span>
+          <span class="chip">Pick <b id="pickChip">—</b></span>
+        </div>
       </div>
     `,
     mainHtml:`<div class="sd-grid" id="grid"></div>`,
-    helper:'One pattern appears multiple times (possibly rotated). Select all of its copies; partial credit is not given. Ignore spinning motion.',
+    helper:'One pattern appears multiple times (possibly rotated). Select that many copies; partial credit is not given. Ignore spinning motion.',
   });
   host.actions.innerHTML = `<button id="start" class="primary">Start Game</button><button id="compare">Compare</button><button id="reset">Reset</button>`;
   const grid=$('grid');
-  const elL=$('lvl'),elS=$('score'),elSt=$('streak'),elG=$('gridChip');
+  const elL=$('lvl'),elS=$('score'),elSt=$('streak'),elG=$('gridChip'),elP=$('pickChip');
   const COL=['#ef4444','#2f81f7','#eab308','#22c55e'];
 
   function rotCW(g){const n=g.length,r=Array.from({length:n},()=>Array(n));for(let i=0;i<n;i++)for(let j=0;j<n;j++)r[j][n-1-i]=g[i][j];return r;}
@@ -1494,6 +1497,7 @@ function gameShapedance() {
     state.correctSet=new Set(opts.map((o,i)=>o.isMatch?i:-1).filter(i=>i!==-1));
     state.selected=new Set();
     elG.textContent=s.size+'×'+s.size;
+    if (elP) elP.textContent = state.correctSet.size;
   }
   function render() {
     grid.innerHTML='';
@@ -1550,7 +1554,8 @@ function gameShapedance() {
     }
   }
   function startQTimer() {
-    const budget=Math.max(15,35-state.level*1.2);
+    // Tight budget: 12s at L1, ~3s at L16. Auto-eval keeps you from waiting.
+    const budget=Math.max(3, 13 - state.level*.6);
     if (state.stopBar) state.stopBar();
     state.stopBar = runProgressBar(host, budget, ()=>{ if (state.active) compare(); });
   }

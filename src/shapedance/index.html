@@ -80,6 +80,7 @@
         </div>
         <div>
           <span class="chip">Grid <b id="gridChip">2×2</b></span>
+          <span class="chip">Pick <b id="pickChip">—</b></span>
         </div>
       </div>
 
@@ -121,7 +122,7 @@
     const els = {
       grid: $('grid'), status: $('status'),
       progress: $('progress'), totalClock: $('totalClock'),
-      lvl: $('lvl'), score: $('score'), streak: $('streak'), gridChip: $('gridChip'),
+      lvl: $('lvl'), score: $('score'), streak: $('streak'), gridChip: $('gridChip'), pickChip: $('pickChip'),
       start: $('start'), compare: $('compare'), reset: $('reset'), sound: $('sound'),
       modalBack: $('modalBack'),
       mScore: $('mScore'), mLevel: $('mLevel'), mAcc: $('mAcc'), mCnt: $('mCnt'),
@@ -299,6 +300,7 @@
       state.correctSet = new Set(opts.map((o,i) => o.isMatch ? i : -1).filter(i=>i!==-1));
       state.selected = new Set();
       els.gridChip.textContent = s.size + '×' + s.size;
+      if (els.pickChip) els.pickChip.textContent = state.correctSet.size;
     }
 
     function render() {
@@ -388,8 +390,8 @@
     }
 
     function startQuestionTimer() {
-      // 30s for small grids, decreases with size
-      const budget = Math.max(15, 35 - state.level * 1.2);
+      // Tight budget: 12s at L1, ~3s at L16. Auto-eval keeps you from waiting.
+      const budget = Math.max(3, 13 - state.level * 0.6);
       let t = budget;
       els.progress.style.width = '100%';
       clearInterval(state.questionTimer);
