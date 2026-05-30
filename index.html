@@ -1351,6 +1351,10 @@ function gamePuzzle() {
   function startTrial() {
     newPuzzle(); state.memorising=true;
     host.status.textContent='Memorise the reference…'; host.status.className='status';
+    // Always show the preview during memorise (even if hideRef was checked last round).
+    previewWrap.style.visibility = 'visible';
+    // Clear any leftover overlays from an interrupted round.
+    [...board.querySelectorAll('.pz-overlay')].forEach(n => n.remove());
     const o=document.createElement('div'); o.className='pz-overlay'; o.textContent='Memorise…'; board.appendChild(o);
     const ms=spec(state.level).memMs;
     if (state.stopBar) state.stopBar();

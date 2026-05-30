@@ -383,7 +383,10 @@
       state.memorising = true;
       els.status.textContent = 'Memorise the reference…';
       els.status.className = 'status';
-      // Show the reference larger temporarily; cover the board.
+      // Always show the preview during memorise (even if hideRef carried over).
+      els.previewWrap.style.visibility = 'visible';
+      // Clear any leftover overlays from an interrupted round.
+      [...els.board.querySelectorAll('.memorise-overlay')].forEach(n => n.remove());
       const overlay = document.createElement('div');
       overlay.className = 'memorise-overlay';
       overlay.textContent = 'Memorise…';
