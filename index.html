@@ -451,7 +451,21 @@ function gameNumerosity() {
     const count = s.count; const [lo, hi] = s.range;
     let solution = []; let target = 0;
     if (op==='add') { for(let i=0;i<count;i++) solution.push(R(lo,hi)); target = solution.reduce((a,b)=>a+b,0); }
-    else if (op==='sub') { for(let i=0;i<count;i++) solution.push(R(lo,hi)); target = solution[0]; for(let i=1;i<count;i++) target -= solution[i]; }
+    else if (op==='sub') {
+      // Build a non-negative subtraction: largest term first, then ensure the
+      // running total never drops below zero.
+      let guard = 0;
+      do {
+        solution = []; for (let i=0;i<count;i++) solution.push(R(lo,hi));
+        solution.sort((a,b)=>b-a);
+        target = solution[0]; for (let i=1;i<count;i++) target -= solution[i];
+        guard++;
+      } while (target < 0 && guard < 50);
+      if (target < 0) { // last-resort floor: pad the leading term
+        const need = -target + R(0, hi);
+        solution[0] += need; target += need;
+      }
+    }
     else if (op==='mul') { for(let i=0;i<count;i++) solution.push(R(lo,hi)); target = solution.reduce((a,b)=>a*b,1); }
     else { const d=R(2,Math.min(12,hi)), q=R(2,Math.min(12,hi)); solution=[d*q, d]; target=q; }
     const tiles = solution.slice();

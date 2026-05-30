@@ -218,11 +218,19 @@
         for (let i=0;i<count;i++) solution.push(R(lo, hi));
         target = solution.reduce((a,b)=>a+b,0);
       } else if (op === 'sub') {
-        // chain: a - b (- c) ; signs alternate; allow negative target
-        const nums = [];
-        for (let i=0;i<count;i++) nums.push(R(lo, hi));
-        solution = nums;
-        target = nums[0]; for (let i=1;i<count;i++) target -= nums[i];
+        // chain: largest term first; retry until target >= 0 so we never show a negative goal.
+        let guard = 0;
+        do {
+          const nums = []; for (let i=0;i<count;i++) nums.push(R(lo, hi));
+          nums.sort((a,b)=>b-a);
+          solution = nums;
+          target = nums[0]; for (let i=1;i<count;i++) target -= nums[i];
+          guard++;
+        } while (target < 0 && guard < 50);
+        if (target < 0) { // hard floor: pad the leading term
+          const need = -target + R(0, hi);
+          solution[0] += need; target += need;
+        }
       } else if (op === 'mul') {
         for (let i=0;i<count;i++) solution.push(R(lo, hi));
         target = solution.reduce((a,b)=>a*b,1);
