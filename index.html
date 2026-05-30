@@ -217,19 +217,19 @@ function showModal(title, rows, isPb) {
 
 // ---------- Router ----------
 const GAMES_META = [
-  { id:'numerosity', title:'Numerosity', section:'Cognitive · Numerical & Memory', badge:'Medium',
+  { id:'numerosity', title:'Numerosity', section:'Cognitive · Numerical & Memory', badge:'Adaptive',
     desc:'Pick hex tiles whose result equals the target. + − × ÷, 2 → 3 picks.' },
-  { id:'digitspan', title:'DigitSpan', section:'Cognitive · Numerical & Memory', badge:'Medium',
+  { id:'digitspan', title:'DigitSpan', section:'Cognitive · Numerical & Memory', badge:'Adaptive',
     desc:'Recall a sequence forward or reverse. Multiple reveal modes, digits & letters.' },
-  { id:'flashback', title:'Flashback', section:'Cognitive · Numerical & Memory', badge:'Hard',
+  { id:'flashback', title:'Flashback', section:'Cognitive · Numerical & Memory', badge:'Adaptive',
     desc:'N-back match decisions. 1-back → 4-back as you streak.' },
-  { id:'pathfinder', title:'Pathfinder', section:'Spatial · Visual processing', badge:'Medium',
+  { id:'pathfinder', title:'Pathfinder', section:'Spatial · Visual processing', badge:'Adaptive',
     desc:'Swap road tiles to connect Start to End. Strict path validation.' },
-  { id:'puzzle', title:'Puzzle', section:'Spatial · Visual processing', badge:'Medium',
-    desc:'Memorize an image, then slide tiles to rebuild it. 3×3 → 5×5.' },
-  { id:'shapedance', title:'Shapedance', section:'Spatial · Visual processing', badge:'Hard',
-    desc:'Find all tiles matching the target pattern, rotation-invariant.' },
-  { id:'singularity', title:'Singularity', section:'Spatial · Visual processing', badge:'Medium',
+  { id:'puzzle', title:'Puzzle', section:'Spatial · Visual processing', badge:'Adaptive',
+    desc:'Memorize an image, then swap tiles to rebuild it. 3×3 → 5×5.' },
+  { id:'shapedance', title:'Shapedance', section:'Spatial · Visual processing', badge:'Adaptive',
+    desc:'Find every tile that matches another. Rotation-invariant.' },
+  { id:'singularity', title:'Singularity', section:'Spatial · Visual processing', badge:'Adaptive',
     desc:'Spot the one unique shape. Rotation alone never counts as unique.' },
 ];
 const GAME_IDS = GAMES_META.map(g => g.id);
