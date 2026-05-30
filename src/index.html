@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HireVue Practice — All Games</title>
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --panel: #131a24;
+      --panel-2: #1a2330;
+      --border: #233146;
+      --text: #e6edf3;
+      --muted: #8b97a8;
+      --accent: #2f81f7;
+      --accent-2: #5dd5c4;
+      --ok: #22c55e;
+      --warn: #eab308;
+      --bad: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background:
+        radial-gradient(ellipse at top, rgba(47,129,247,0.15), transparent 60%),
+        radial-gradient(ellipse at bottom, rgba(93,213,196,0.10), transparent 60%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 48px 24px 64px; }
+    header { text-align: center; margin-bottom: 32px; }
+    h1 { font-size: 36px; margin: 0 0 8px; letter-spacing: -0.5px; }
+    h1 .accent { background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .tag { color: var(--muted); font-size: 15px; max-width: 720px; margin: 0 auto; }
+    .stats-bar { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 22px; }
+    .stat { background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 8px 14px; font-size: 13px; color: var(--muted); }
+    .stat b { color: var(--text); margin-right: 6px; }
+    .section-title { font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin: 28px 0 12px; padding-left: 4px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    .card { display: block; text-decoration: none; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 18px; position: relative; overflow: hidden; transition: transform .15s ease, border-color .15s ease, background .15s ease; }
+    .card:hover { transform: translateY(-2px); border-color: var(--accent); background: var(--panel-2); }
+    .card .title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+    .card .title { font-size: 18px; font-weight: 600; }
+    .card .badge { font-size: 11px; padding: 3px 8px; border-radius: 999px; background: rgba(47,129,247,0.15); color: var(--accent); border: 1px solid rgba(47,129,247,0.35); text-transform: uppercase; letter-spacing: 1px; }
+    .card .desc { font-size: 13px; color: var(--muted); line-height: 1.4; margin: 4px 0 12px; min-height: 36px; }
+    .card .best { font-size: 12px; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; }
+    .card .best span { display: inline-flex; align-items: center; gap: 4px; }
+    .card .best b { color: var(--text); }
+    .card .ico { font-size: 22px; }
+    .card .play { position: absolute; top: 14px; right: 14px; opacity: 0; transition: opacity .15s ease; color: var(--accent); font-size: 14px; }
+    .card:hover .play { opacity: 1; }
+    footer { margin-top: 36px; text-align: center; color: var(--muted); font-size: 12px; }
+    footer a { color: var(--muted); }
+    .reset { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 999px; padding: 5px 10px; font-size: 11px; cursor: pointer; margin-left: 8px; }
+    .reset:hover { color: var(--bad); border-color: var(--bad); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>HireVue <span class="accent">Practice</span></h1>
+      <p class="tag">Adaptive recreations of the seven cognitive & spatial games used in HireVue's game-based assessment. Each game is timed, scored, and ramps beyond the live test.</p>
+      <div class="stats-bar" id="statsBar"></div>
+    </header>
+
+    <div class="section-title">Cognitive · Numerical & Memory</div>
+    <div class="grid">
+      <a class="card" href="numerosity/" data-game="numerosity">
+        <div class="title-row"><div class="title">Numerosity</div><div class="badge">Medium</div></div>
+        <div class="desc">Pick hex tiles whose result equals the target. + − × ÷, 2 → 3 picks.</div>
+        <div class="best" data-best></div>
+        <div class="play">Start →</div>
+      </a>
+      <a class="card" href="digitspan/" data-game="digitspan">
+        <div class="title-row"><div class="title">DigitSpan</div><div class="badge">Medium</div></div>
+        <div class="desc">Recall a sequence forward or reverse. Multiple reveal modes, digits & letters.</div>
+        <div class="best" data-best></div>
+        <div class="play">Start →</div>
+      </a>
+      <a class="card" href="flashback/" data-game="flashback">
+        <div class="title-row"><div class="title">Flashback</div><div class="badge">Hard</div></div>
+        <div class="desc">N-back match decisions. 1-back → 4-back as you streak.</div>
+        <div class="best" data-best></div>
+        <div class="play">Start →</div>
+      </a>
+    </div>
+
+    <div class="section-title">Spatial · Visual processing</div>
+    <div class="grid">
+      <a class="card" href="pathfinder/" data-game="pathfinder">
+        <div class="title-row"><div class="title">Pathfinder</div><div class="badge">Medium</div></div>
+        <div class="desc">Swap road tiles to connect Start to End. Strict path validation.</div>
+        <div class="best" data-best></div>
+        <div class="play">Start →</div>
+      </a>
+      <a class="card" href="puzzle/" data-game="puzzle">
+        <div class="title-row"><div class="title">Puzzle</div><div class="badge">Medium</div></div>
+        <div class="desc">Memorize an image, then slide tiles to rebuild it. 3×3 → 5×5.</div>
+        <div class="best" data-best></div>
+        <div class="play">Start →</div>
+      </a>
+      <a class="card" href="shapedance/" data-game="shapedance">
+        <div class="title-row"><div class="title">Shapedance</div><div class="badge">Hard</div></div>
+        <div class="desc">Find all tiles matching the target pattern, rotation-invariant.</div>
+        <div class="best" data-best></div>
+        <div class="play">Start →</div>
+      </a>
+      <a class="card" href="singularity/" data-game="singularity">
+        <div class="title-row"><div class="title">Singularity</div><div class="badge">Medium</div></div>
+        <div class="desc">Spot the one unique shape. Rotation alone never counts as unique.</div>
+        <div class="best" data-best></div>
+        <div class="play">Start →</div>
+      </a>
+    </div>
+
+    <footer>
+      Personal bests are stored locally on this device.
+      <button class="reset" id="resetAll">Reset all stats</button>
+      <div style="margin-top:8px">Practice all seven to be fully ready · ~3 min per game</div>
+    </footer>
+  </div>
+
+  <script>
+    const GAMES = ['numerosity','digitspan','flashback','pathfinder','puzzle','shapedance','singularity'];
+    function key(g) { return 'hvp.best.' + g; }
+    function loadBest(g) {
+      try { return JSON.parse(localStorage.getItem(key(g)) || 'null'); } catch { return null; }
+    }
+    function fmtNum(n){ return (n==null) ? '—' : (Number.isInteger(n) ? n.toString() : n.toFixed(1)); }
+    function renderBest() {
+      let totalScore = 0, totalGames = 0, totalRuns = 0;
+      document.querySelectorAll('[data-game]').forEach(card => {
+        const g = card.dataset.game;
+        const b = loadBest(g);
+        const slot = card.querySelector('[data-best]');
+        if (!b) { slot.innerHTML = '<span style="opacity:.6">No score yet</span>'; return; }
+        const parts = [];
+        if (b.score != null) parts.push(`<span><b>${fmtNum(b.score)}</b> best score</span>`);
+        if (b.level != null) parts.push(`<span>L<b>${fmtNum(b.level)}</b></span>`);
+        if (b.accuracy != null) parts.push(`<span><b>${Math.round(b.accuracy*100)}%</b></span>`);
+        slot.innerHTML = parts.join('');
+        if (typeof b.score === 'number') { totalScore += b.score; totalGames++; }
+        if (typeof b.runs === 'number') totalRuns += b.runs;
+      });
+      const bar = document.getElementById('statsBar');
+      bar.innerHTML = `
+        <div class="stat"><b>${totalGames}/7</b> games played</div>
+        <div class="stat"><b>${totalScore.toLocaleString()}</b> total best score</div>
+        <div class="stat"><b>${totalRuns}</b> total runs</div>
+      `;
+    }
+    document.getElementById('resetAll').addEventListener('click', () => {
+      if (!confirm('Clear all locally saved scores and stats?')) return;
+      GAMES.forEach(g => localStorage.removeItem(key(g)));
+      renderBest();
+    });
+    renderBest();
+  </script>
+</body>
+</html>

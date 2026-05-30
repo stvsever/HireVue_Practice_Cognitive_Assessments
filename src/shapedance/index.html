@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shapedance · HireVue Practice</title>
+  <style>
+    :root {
+      --bg:#0b0f17; --panel:#131a24; --panel-2:#1a2330; --border:#233146;
+      --text:#e6edf3; --muted:#8b97a8; --accent:#2f81f7; --accent-2:#5dd5c4;
+      --ok:#22c55e; --warn:#eab308; --bad:#ef4444;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 60px 20px 40px; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 24px; }
+    h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.3px; }
+    .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+    .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .progress-wrap { flex: 1; height: 10px; background: #0a1018; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+    .progress-bar { height: 100%; width: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .1s linear; }
+    .clock { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; min-width: 50px; text-align: right; }
+    .switch { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
+    .switch input { accent-color: var(--accent); }
+    .meta-row { display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px; gap: 10px; flex-wrap: wrap; }
+    .chip { display:inline-block; background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px; padding: 5px 10px; font-size: 12px; color: var(--text); }
+    .chip b { color: var(--accent-2); font-weight: 600; }
+    .target-area { display: flex; gap: 12px; align-items: center; justify-content: center; margin-bottom: 12px; }
+    .target-tile { background:#101826; border:2px dashed #314161; border-radius: 12px; padding: 6px; }
+    .target-tile canvas { display: block; width: 140px; height: 140px; }
+    .target-label { font-size: 12px; color: var(--muted); }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+    .tile { background:#1f2937; border:2px solid #2b3547; border-radius:12px; padding:8px; cursor:pointer; user-select:none; display:flex; align-items:center; justify-content:center; position:relative; }
+    .tile.selected { border-color: var(--accent); background:#243b66; }
+    .tile canvas { width: 120px; height: 120px; }
+    .tile .rot { display: inline-block; }
+    .tile .spin { animation: spin 10s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .status { margin-top: 12px; min-height: 22px; font-size: 14px; text-align: center; }
+    .ok { color: var(--ok); }
+    .fail { color: var(--bad); }
+    .actions { display: flex; gap: 8px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+    button { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); padding: 10px 16px; border-radius: 10px; cursor: pointer; font-size: 14px; }
+    button.primary { background: linear-gradient(180deg, var(--accent), #1c66cf); border-color: transparent; }
+    .helper { color: var(--muted); font-size: 12px; margin-top: 6px; text-align: center; }
+    .back-btn { position: fixed; top: 14px; left: 14px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; background: var(--panel); color:var(--text); border:1px solid var(--border); border-radius: 999px; text-decoration: none; z-index: 10; }
+    .modal-back { position: fixed; inset: 0; background: rgba(2,6,12,0.7); display: none; align-items: center; justify-content: center; z-index: 20; backdrop-filter: blur(6px); }
+    .modal-back.show { display: flex; }
+    .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 24px; max-width: 460px; width: 90%; }
+    .modal h2 { margin: 0 0 6px; font-size: 22px; }
+    .modal .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 14px; }
+    .modal .row:last-child { border-bottom: 0; }
+    .modal .row b { color: var(--accent-2); }
+    .pb-flag { display: inline-block; background: rgba(34,197,94,0.15); color: var(--ok); padding: 4px 8px; border-radius: 999px; font-size: 12px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <a class="back-btn" href="../" aria-label="Back to hub">←</a>
+
+  <div class="wrap">
+    <div class="panel">
+      <h1>Shapedance</h1>
+      <div class="subtitle">Find every tile that matches another. Rotation does not change identity.</div>
+
+      <div class="topbar">
+        <div class="progress-wrap"><div id="progress" class="progress-bar"></div></div>
+        <div class="clock" id="totalClock" title="Total time">03:00</div>
+        <label class="switch"><input type="checkbox" id="sound" checked> Sound</label>
+      </div>
+
+      <div class="meta-row">
+        <div>
+          <span class="chip">Level <b id="lvl">1</b></span>
+          <span class="chip">Score <b id="score">0</b></span>
+          <span class="chip">Streak <b id="streak">0</b></span>
+        </div>
+        <div>
+          <span class="chip">Grid <b id="gridChip">2×2</b></span>
+        </div>
+      </div>
+
+      <div class="grid" id="grid"></div>
+      <div class="status" id="status"></div>
+
+      <div class="actions">
+        <button id="start" class="primary">Start Game</button>
+        <button id="compare">Compare</button>
+        <button id="reset">Reset</button>
+      </div>
+      <div class="helper">One pattern appears multiple times (possibly rotated). Select all of its copies — partial credit is not given. Some tiles spin; ignore motion.</div>
+    </div>
+  </div>
+
+  <div class="modal-back" id="modalBack">
+    <div class="modal">
+      <h2>Session complete</h2>
+      <div class="subtitle">Here's how you did this run.</div>
+      <div class="row"><span>Final score</span><b id="mScore">0</b></div>
+      <div class="row"><span>Max level reached</span><b id="mLevel">0</b></div>
+      <div class="row"><span>Accuracy</span><b id="mAcc">0%</b></div>
+      <div class="row"><span>Correct / Attempted</span><b id="mCnt">0 / 0</b></div>
+      <div class="row"><span>Best streak</span><b id="mStreak">0</b></div>
+      <div id="pbFlag" class="pb-flag" style="display:none">New personal best!</div>
+      <div class="actions">
+        <button class="primary" id="mAgain">Play again</button>
+        <a href="../" style="text-decoration:none;"><button>Back to hub</button></a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    const GAME = 'shapedance';
+    const TOTAL = 180;
+    const $ = (id) => document.getElementById(id);
+
+    const els = {
+      grid: $('grid'), status: $('status'),
+      progress: $('progress'), totalClock: $('totalClock'),
+      lvl: $('lvl'), score: $('score'), streak: $('streak'), gridChip: $('gridChip'),
+      start: $('start'), compare: $('compare'), reset: $('reset'), sound: $('sound'),
+      modalBack: $('modalBack'),
+      mScore: $('mScore'), mLevel: $('mLevel'), mAcc: $('mAcc'), mCnt: $('mCnt'),
+      mStreak: $('mStreak'), pbFlag: $('pbFlag'), mAgain: $('mAgain'),
+    };
+
+    function beep(freq=440, dur=0.08, type='sine', vol=0.05) {
+      if (!els.sound.checked) return;
+      try {
+        const c = beep._ctx || (beep._ctx = new (window.AudioContext || window.webkitAudioContext)());
+        const o = c.createOscillator(); const g = c.createGain();
+        o.type = type; o.frequency.value = freq; g.gain.value = vol;
+        o.connect(g); g.connect(c.destination); o.start();
+        g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + dur);
+        o.stop(c.currentTime + dur);
+      } catch(e) {}
+    }
+
+    // ------ Pattern utilities ------
+    // grid[i][j] = -1 empty, 0 circle, 1 square, 2 triangle, 3 diamond
+    const SHAPE_COLORS = ['#ef4444','#2f81f7','#eab308','#22c55e'];
+    function rotCW(g) {
+      const n = g.length, r = Array.from({length:n},()=>Array(n));
+      for (let i=0;i<n;i++) for (let j=0;j<n;j++) r[j][n-1-i] = g[i][j];
+      return r;
+    }
+    function gridsEqual(a, b) {
+      if (a.length !== b.length) return false;
+      for (let i=0;i<a.length;i++) for (let j=0;j<a.length;j++) if (a[i][j] !== b[i][j]) return false;
+      return true;
+    }
+    function equalModRotation(a, b) {
+      if (gridsEqual(a,b)) return true;
+      let r = b;
+      for (let k=0;k<3;k++) { r = rotCW(r); if (gridsEqual(a,r)) return true; }
+      return false;
+    }
+    function cloneGrid(g){ return g.map(row=>row.slice()); }
+    function distinctShapes(g){ const s=new Set(); for(const row of g) for(const v of row) if (v!==-1) s.add(v); return s.size; }
+
+    function randomGrid(n) {
+      const total = n*n;
+      const minFill = Math.max(2, Math.floor(0.45*total));
+      const maxFill = Math.max(minFill, Math.floor(0.7*total));
+      const toFill = minFill + Math.floor(Math.random()*(maxFill-minFill+1));
+      const g = Array.from({length:n},()=>Array(n).fill(-1));
+      const idxs = Array.from({length: total}, (_,k)=>k).sort(()=>Math.random()-0.5).slice(0, toFill);
+      const palette = n <= 3 ? 3 : 4;
+      for (const idx of idxs) {
+        g[Math.floor(idx/n)][idx%n] = Math.floor(Math.random()*palette);
+      }
+      if (distinctShapes(g) < 2) {
+        // ensure at least 2 distinct shape kinds
+        const [i,j] = [Math.floor(Math.random()*n), Math.floor(Math.random()*n)];
+        g[i][j] = (Math.floor(Math.random()*4));
+      }
+      return g;
+    }
+
+    function mutate(g, intensity = 0.4) {
+      const n = g.length;
+      const total = n*n;
+      const k = Math.max(1, Math.floor(total * intensity));
+      const out = cloneGrid(g);
+      const idxs = Array.from({length: total}, (_,i)=>i).sort(()=>Math.random()-0.5).slice(0, k);
+      for (const idx of idxs) {
+        const i = Math.floor(idx/n), j = idx%n;
+        const r = Math.random();
+        if (r < 0.4) {
+          // swap shape kind
+          const cur = out[i][j];
+          let s = Math.floor(Math.random()*4);
+          while (cur !== -1 && s === cur) s = Math.floor(Math.random()*4);
+          out[i][j] = s;
+        } else if (r < 0.7) {
+          // remove
+          out[i][j] = -1;
+        } else {
+          // add
+          if (out[i][j] === -1) out[i][j] = Math.floor(Math.random()*4);
+          else out[i][j] = (out[i][j] + 1) % 4;
+        }
+      }
+      // Avoid ending up identical mod rotation
+      if (equalModRotation(g, out)) {
+        const i = Math.floor(Math.random()*n), j = Math.floor(Math.random()*n);
+        out[i][j] = out[i][j] === -1 ? Math.floor(Math.random()*4) : -1;
+      }
+      return out;
+    }
+
+    function drawPattern(ctx, g) {
+      const n = g.length;
+      const w = ctx.canvas.width, h = ctx.canvas.height;
+      ctx.clearRect(0,0,w,h);
+      ctx.fillStyle = '#0f172a'; ctx.fillRect(0,0,w,h);
+      const cell = Math.min(w,h)/n;
+      ctx.strokeStyle = '#22304a'; ctx.lineWidth = 1;
+      for (let i=1;i<n;i++) {
+        ctx.beginPath(); ctx.moveTo(i*cell, 0); ctx.lineTo(i*cell, h); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i*cell); ctx.lineTo(w, i*cell); ctx.stroke();
+      }
+      for (let i=0;i<n;i++) for (let j=0;j<n;j++) {
+        const v = g[i][j]; if (v === -1) continue;
+        const cx = j*cell + cell/2, cy = i*cell + cell/2, r = cell*0.30;
+        ctx.fillStyle = SHAPE_COLORS[v];
+        if (v === 0) { ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill(); }
+        else if (v === 1) { const s = r*1.6; ctx.fillRect(cx-s/2, cy-s/2, s, s); }
+        else if (v === 2) { ctx.beginPath(); ctx.moveTo(cx, cy-r); ctx.lineTo(cx-r, cy+r*0.85); ctx.lineTo(cx+r, cy+r*0.85); ctx.closePath(); ctx.fill(); }
+        else { ctx.beginPath(); ctx.moveTo(cx, cy-r); ctx.lineTo(cx+r, cy); ctx.lineTo(cx, cy+r); ctx.lineTo(cx-r, cy); ctx.closePath(); ctx.fill(); }
+      }
+      ctx.strokeStyle = '#3b4660'; ctx.lineWidth = 2; ctx.strokeRect(1,1,w-2,h-2);
+    }
+
+    // ------ Level spec ------
+    function spec(lvl) {
+      if (lvl <= 2) return { size: 2, tiles: 4, mutI: 0.5 };
+      if (lvl <= 4) return { size: 3, tiles: 6, mutI: 0.45 };
+      if (lvl <= 7) return { size: 3, tiles: 6, mutI: 0.32 };
+      if (lvl <= 10) return { size: 4, tiles: 6, mutI: 0.30 };
+      if (lvl <= 14) return { size: 4, tiles: 6, mutI: 0.22 };
+      return { size: 5, tiles: 6, mutI: 0.20 };
+    }
+
+    // ------ State ------
+    let state = null;
+    function freshState() {
+      return {
+        active: false, level: 1, maxLevel: 1, score: 0, streak: 0, bestStreak: 0,
+        correct: 0, attempted: 0,
+        options: null, correctSet: null, selected: new Set(),
+        roundStart: 0, questionTimer: null, totalTimer: null, totalLeft: TOTAL,
+      };
+    }
+
+    function buildRound() {
+      const s = spec(state.level);
+      const matchPattern = randomGrid(s.size);
+      const tiles = s.tiles;
+      const minMatch = 2;
+      const maxMatch = Math.max(minMatch, Math.floor(tiles/2)+1);
+      const numMatch = minMatch + Math.floor(Math.random()*(maxMatch-minMatch+1));
+      const numDistr = tiles - numMatch;
+
+      const opts = [];
+      for (let i=0;i<numMatch;i++) {
+        opts.push({
+          grid: matchPattern,
+          rotate: Math.floor(Math.random()*4)*90,
+          spin: Math.random() < 0.3,
+          isMatch: true,
+        });
+      }
+      // distractors: must not match each other or matchPattern (mod rotation)
+      const distractorGrids = [matchPattern];
+      let guard = 0;
+      while (opts.filter(o => !o.isMatch).length < numDistr && guard < 400) {
+        guard++;
+        const cand = mutate(matchPattern, s.mutI);
+        if (distractorGrids.some(g => equalModRotation(g, cand))) continue;
+        distractorGrids.push(cand);
+        opts.push({
+          grid: cand,
+          rotate: Math.floor(Math.random()*4)*90,
+          spin: Math.random() < 0.25,
+          isMatch: false,
+        });
+      }
+      // shuffle
+      for (let i = opts.length-1; i > 0; i--) {
+        const j = Math.floor(Math.random()*(i+1));
+        [opts[i], opts[j]] = [opts[j], opts[i]];
+      }
+      state.options = opts;
+      state.correctSet = new Set(opts.map((o,i) => o.isMatch ? i : -1).filter(i=>i!==-1));
+      state.selected = new Set();
+      els.gridChip.textContent = s.size + '×' + s.size;
+    }
+
+    function render() {
+      els.grid.innerHTML = '';
+      state.options.forEach((opt, idx) => {
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        const wrap = document.createElement('div');
+        wrap.className = 'rot';
+        wrap.style.transform = `rotate(${opt.rotate}deg)`;
+        const inner = document.createElement('div');
+        if (opt.spin) inner.classList.add('spin');
+        const cv = document.createElement('canvas');
+        cv.width = 140; cv.height = 140;
+        drawPattern(cv.getContext('2d'), opt.grid);
+        inner.appendChild(cv);
+        wrap.appendChild(inner);
+        tile.appendChild(wrap);
+        tile.addEventListener('click', () => toggle(idx));
+        els.grid.appendChild(tile);
+      });
+      els.lvl.textContent = state.level;
+      els.score.textContent = state.score;
+      els.streak.textContent = state.streak;
+      state.roundStart = performance.now();
+      startQuestionTimer();
+    }
+
+    function toggle(idx) {
+      if (!state.active) return;
+      const el = els.grid.children[idx];
+      if (state.selected.has(idx)) {
+        state.selected.delete(idx); el.classList.remove('selected');
+      } else {
+        state.selected.add(idx); el.classList.add('selected');
+        beep(700, 0.04, 'triangle', 0.04);
+      }
+    }
+
+    function compare() {
+      if (!state.active) return;
+      clearInterval(state.questionTimer);
+      state.attempted++;
+      const expected = state.correctSet;
+      const chosen = state.selected;
+      let ok = expected.size === chosen.size;
+      if (ok) for (const v of expected) if (!chosen.has(v)) { ok = false; break; }
+      const rt = (performance.now() - state.roundStart)/1000;
+      if (ok) {
+        state.correct++; state.streak++;
+        state.bestStreak = Math.max(state.bestStreak, state.streak);
+        beep(900, 0.12, 'sine', 0.06);
+        const speedBonus = Math.max(0.5, 1.4 - rt/22);
+        const pts = Math.round(150 * state.level * speedBonus * (1 + Math.min(state.streak,9)*0.04));
+        state.score += pts;
+        els.status.textContent = `Correct! +${pts}`;
+        els.status.className = 'status ok';
+        setTimeout(() => {
+          if (!state.active) return;
+          if (state.streak >= 2) { state.level++; state.maxLevel = Math.max(state.maxLevel, state.level); }
+          buildRound(); render();
+        }, 700);
+      } else {
+        beep(180, 0.18, 'square', 0.05);
+        state.streak = 0;
+        els.status.textContent = 'Wrong — try a slower scan.';
+        els.status.className = 'status fail';
+        setTimeout(() => {
+          if (!state.active) return;
+          state.level = Math.max(1, state.level - 1);
+          buildRound(); render();
+        }, 900);
+      }
+    }
+
+    function startQuestionTimer() {
+      // 30s for small grids, decreases with size
+      const budget = Math.max(15, 35 - state.level * 1.2);
+      let t = budget;
+      els.progress.style.width = '100%';
+      clearInterval(state.questionTimer);
+      state.questionTimer = setInterval(() => {
+        if (!state.active) { clearInterval(state.questionTimer); return; }
+        t -= 0.1; if (t < 0) t = 0;
+        els.progress.style.width = (t/budget*100) + '%';
+        if (t === 0) { clearInterval(state.questionTimer); compare(); }
+      }, 100);
+    }
+
+    function fmtTime(s) { const m=Math.floor(s/60).toString().padStart(2,'0'); const r=(s%60).toString().padStart(2,'0'); return m+':'+r; }
+    function startTotalTimer() {
+      els.totalClock.textContent = fmtTime(state.totalLeft);
+      clearInterval(state.totalTimer);
+      state.totalTimer = setInterval(() => {
+        if (!state.active) { clearInterval(state.totalTimer); return; }
+        state.totalLeft--;
+        els.totalClock.textContent = fmtTime(state.totalLeft);
+        if (state.totalLeft <= 0) endGame();
+      }, 1000);
+    }
+
+    function startGame() {
+      state = freshState();
+      state.active = true;
+      buildRound(); render();
+      startTotalTimer();
+      els.start.textContent = 'Restart';
+    }
+    function endGame() {
+      state.active = false;
+      clearInterval(state.questionTimer);
+      clearInterval(state.totalTimer);
+      const acc = state.attempted === 0 ? 0 : state.correct/state.attempted;
+      const key = 'hvp.best.' + GAME;
+      let prev = null;
+      try { prev = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
+      const newRun = {
+        score: state.score, level: state.maxLevel, accuracy: acc,
+        correct: state.correct, attempted: state.attempted, streak: state.bestStreak,
+        runs: (prev && prev.runs ? prev.runs : 0) + 1, at: Date.now()
+      };
+      let isPb = false;
+      if (!prev || newRun.score > (prev.score || 0)) { isPb = true; localStorage.setItem(key, JSON.stringify(newRun)); }
+      else { prev.runs = newRun.runs; localStorage.setItem(key, JSON.stringify(prev)); }
+      els.mScore.textContent = state.score.toLocaleString();
+      els.mLevel.textContent = state.maxLevel;
+      els.mAcc.textContent = Math.round(acc*100) + '%';
+      els.mCnt.textContent = `${state.correct} / ${state.attempted}`;
+      els.mStreak.textContent = state.bestStreak;
+      els.pbFlag.style.display = isPb ? 'inline-block' : 'none';
+      els.modalBack.classList.add('show');
+    }
+
+    els.start.addEventListener('click', startGame);
+    els.compare.addEventListener('click', compare);
+    els.reset.addEventListener('click', () => {
+      if (state) { state.active = false; clearInterval(state.questionTimer); clearInterval(state.totalTimer); }
+      state = freshState();
+      els.grid.innerHTML = ''; els.status.textContent = '';
+      els.lvl.textContent='1'; els.score.textContent='0'; els.streak.textContent='0';
+      els.gridChip.textContent='2×2';
+      els.totalClock.textContent = fmtTime(TOTAL); els.progress.style.width = '100%';
+      els.start.textContent = 'Start Game';
+    });
+    els.mAgain.addEventListener('click', () => { els.modalBack.classList.remove('show'); startGame(); });
+
+    state = freshState();
+    els.totalClock.textContent = fmtTime(TOTAL);
+  })();
+  </script>
+</body>
+</html>

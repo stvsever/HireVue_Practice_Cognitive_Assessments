@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flashback · HireVue Practice</title>
+  <style>
+    :root {
+      --bg:#0b0f17; --panel:#131a24; --panel-2:#1a2330; --border:#233146;
+      --text:#e6edf3; --muted:#8b97a8; --accent:#2f81f7; --accent-2:#5dd5c4;
+      --ok:#22c55e; --warn:#eab308; --bad:#ef4444;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .wrap { max-width: 640px; margin: 0 auto; padding: 60px 20px 40px; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 24px; }
+    h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.3px; }
+    .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+    .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .progress-wrap { flex: 1; height: 10px; background: #0a1018; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+    .progress-bar { height: 100%; width: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .1s linear; }
+    .clock { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; min-width: 50px; text-align: right; }
+    .switch { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
+    .switch input { accent-color: var(--accent); }
+    .meta-row { display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px; gap: 10px; flex-wrap: wrap; }
+    .chip { display:inline-block; background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px; padding: 5px 10px; font-size: 12px; color: var(--text); }
+    .chip b { color: var(--accent-2); font-weight: 600; }
+    .rule { text-align: center; margin: 6px 0 12px; font-size: 14px; color: var(--muted); }
+    .rule b { color: var(--accent); }
+    .stage { display: flex; justify-content: center; align-items: center; min-height: 240px; background: linear-gradient(180deg, rgba(47,129,247,0.08), transparent); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+    .stage canvas { width: 200px; height: 200px; }
+    .answer-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    .btn-big { padding: 16px; font-size: 18px; border-radius: 12px; cursor: pointer; border: 1px solid var(--border); color: var(--text); }
+    .btn-match    { background: linear-gradient(180deg, #16793b, #0f5128); border-color: transparent; }
+    .btn-nomatch  { background: linear-gradient(180deg, #8a2222, #5b1414); border-color: transparent; }
+    .btn-big:hover { filter: brightness(1.15); }
+    .btn-big.flash { outline: 3px solid var(--accent-2); }
+    .status { margin-top: 12px; min-height: 22px; font-size: 14px; text-align: center; }
+    .ok { color: var(--ok); }
+    .fail { color: var(--bad); }
+    button { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); padding: 10px 16px; border-radius: 10px; cursor: pointer; font-size: 14px; }
+    button.primary { background: linear-gradient(180deg, var(--accent), #1c66cf); border-color: transparent; }
+    .actions { display: flex; gap: 8px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+    .helper { color: var(--muted); font-size: 12px; margin-top: 6px; text-align: center; }
+    .back-btn { position: fixed; top: 14px; left: 14px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; background: var(--panel); color:var(--text); border:1px solid var(--border); border-radius: 999px; text-decoration: none; z-index: 10; }
+    .modal-back { position: fixed; inset: 0; background: rgba(2,6,12,0.7); display: none; align-items: center; justify-content: center; z-index: 20; backdrop-filter: blur(6px); }
+    .modal-back.show { display: flex; }
+    .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 24px; max-width: 460px; width: 90%; }
+    .modal h2 { margin: 0 0 6px; font-size: 22px; }
+    .modal .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 14px; }
+    .modal .row:last-child { border-bottom: 0; }
+    .modal .row b { color: var(--accent-2); }
+    .pb-flag { display: inline-block; background: rgba(34,197,94,0.15); color: var(--ok); padding: 4px 8px; border-radius: 999px; font-size: 12px; margin-top: 10px; }
+    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--panel-2); border:1px solid var(--border); padding: 1px 6px; border-radius: 4px; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <a class="back-btn" href="../" aria-label="Back to hub">←</a>
+
+  <div class="wrap">
+    <div class="panel">
+      <h1>Flashback</h1>
+      <div class="subtitle">Does the shape on screen match the one from <b>N steps</b> ago?</div>
+
+      <div class="topbar">
+        <div class="progress-wrap"><div id="progress" class="progress-bar"></div></div>
+        <div class="clock" id="totalClock" title="Total time">03:00</div>
+        <label class="switch"><input type="checkbox" id="sound" checked> Sound</label>
+      </div>
+
+      <div class="meta-row">
+        <div>
+          <span class="chip"><b id="nback">1</b>-back</span>
+          <span class="chip">Score <b id="score">0</b></span>
+          <span class="chip">Streak <b id="streak">0</b></span>
+        </div>
+        <div>
+          <span class="chip" id="iChip">Item <b id="iCount">0</b></span>
+        </div>
+      </div>
+
+      <div class="rule" id="rule">Press <span class="kbd">M</span> for match, <span class="kbd">N</span> for no-match.</div>
+
+      <div class="stage"><canvas id="stage" width="400" height="400"></canvas></div>
+
+      <div class="answer-row">
+        <button class="btn-big btn-match" id="btnMatch" disabled>Match (M)</button>
+        <button class="btn-big btn-nomatch" id="btnNo" disabled>No Match (N)</button>
+      </div>
+
+      <div class="status" id="status"></div>
+
+      <div class="actions">
+        <button id="start" class="primary">Start Game</button>
+        <button id="reset">Reset</button>
+      </div>
+      <div class="helper">Shapes flash for ~1.2s. The N-back level climbs on streaks.</div>
+    </div>
+  </div>
+
+  <div class="modal-back" id="modalBack">
+    <div class="modal">
+      <h2>Session complete</h2>
+      <div class="subtitle">Here's how you did this run.</div>
+      <div class="row"><span>Final score</span><b id="mScore">0</b></div>
+      <div class="row"><span>Max N-back reached</span><b id="mLevel">1</b></div>
+      <div class="row"><span>Accuracy</span><b id="mAcc">0%</b></div>
+      <div class="row"><span>Correct / Decisions</span><b id="mCnt">0 / 0</b></div>
+      <div class="row"><span>Median response time</span><b id="mRt">—</b></div>
+      <div id="pbFlag" class="pb-flag" style="display:none">New personal best!</div>
+      <div class="actions">
+        <button class="primary" id="mAgain">Play again</button>
+        <a href="../" style="text-decoration:none;"><button>Back to hub</button></a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    const GAME = 'flashback';
+    const TOTAL = 180;
+    const $ = (id) => document.getElementById(id);
+
+    const els = {
+      stage: $('stage'), btnMatch: $('btnMatch'), btnNo: $('btnNo'),
+      progress: $('progress'), totalClock: $('totalClock'),
+      nback: $('nback'), score: $('score'), streak: $('streak'),
+      iCount: $('iCount'), rule: $('rule'),
+      start: $('start'), reset: $('reset'), sound: $('sound'),
+      status: $('status'),
+      modalBack: $('modalBack'),
+      mScore: $('mScore'), mLevel: $('mLevel'), mAcc: $('mAcc'), mCnt: $('mCnt'), mRt: $('mRt'),
+      pbFlag: $('pbFlag'), mAgain: $('mAgain'),
+    };
+    const ctx = els.stage.getContext('2d');
+
+    function beep(freq=440, dur=0.08, type='sine', vol=0.05) {
+      if (!els.sound.checked) return;
+      try {
+        const c = beep._ctx || (beep._ctx = new (window.AudioContext || window.webkitAudioContext)());
+        const o = c.createOscillator(); const g = c.createGain();
+        o.type = type; o.frequency.value = freq; g.gain.value = vol;
+        o.connect(g); g.connect(c.destination); o.start();
+        g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + dur);
+        o.stop(c.currentTime + dur);
+      } catch(e) {}
+    }
+
+    // Shape vocabulary: form × color × band(top/bot decoration)
+    const FORMS = ['circle','square','triangle','diamond','pentagon','hexagon'];
+    const COLORS = ['#ef4444','#2f81f7','#22c55e','#eab308','#a855f7','#06b6d4'];
+    const BANDS  = ['none','top','bottom'];
+
+    function makeShape() {
+      return {
+        form: FORMS[Math.floor(Math.random()*FORMS.length)],
+        color: COLORS[Math.floor(Math.random()*COLORS.length)],
+        band:  BANDS[Math.floor(Math.random()*BANDS.length)],
+      };
+    }
+    function shapeEqual(a, b) {
+      if (!a || !b) return false;
+      return a.form === b.form && a.color === b.color && a.band === b.band;
+    }
+    function shapeKey(a) { return a.form+'/'+a.color+'/'+a.band; }
+
+    function drawShape(s) {
+      const w = els.stage.width, h = els.stage.height;
+      ctx.clearRect(0,0,w,h);
+      if (!s) return;
+      const cx = w/2, cy = h/2, r = 110;
+      ctx.fillStyle = s.color;
+      ctx.strokeStyle = '#0b0f17';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      switch (s.form) {
+        case 'circle':
+          ctx.arc(cx, cy, r, 0, Math.PI*2); break;
+        case 'square':
+          ctx.rect(cx-r, cy-r, r*2, r*2); break;
+        case 'triangle': {
+          const a = r*1.15;
+          ctx.moveTo(cx, cy - a);
+          ctx.lineTo(cx - a*0.95, cy + a*0.7);
+          ctx.lineTo(cx + a*0.95, cy + a*0.7);
+          ctx.closePath(); break;
+        }
+        case 'diamond':
+          ctx.moveTo(cx, cy-r); ctx.lineTo(cx+r, cy);
+          ctx.lineTo(cx, cy+r); ctx.lineTo(cx-r, cy); ctx.closePath(); break;
+        case 'pentagon': {
+          for (let i=0;i<5;i++) {
+            const a = -Math.PI/2 + i*Math.PI*2/5;
+            const x = cx + r*Math.cos(a), y = cy + r*Math.sin(a);
+            (i===0) ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+          }
+          ctx.closePath(); break;
+        }
+        case 'hexagon': {
+          for (let i=0;i<6;i++) {
+            const a = i*Math.PI/3;
+            const x = cx + r*Math.cos(a), y = cy + r*Math.sin(a);
+            (i===0) ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+          }
+          ctx.closePath(); break;
+        }
+      }
+      ctx.fill(); ctx.stroke();
+
+      // Band overlay (a stripe at top or bottom)
+      if (s.band !== 'none') {
+        ctx.save();
+        ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        const bw = r*1.6, bh = 22;
+        const by = s.band === 'top' ? cy - r + 10 : cy + r - 32;
+        ctx.beginPath();
+        ctx.rect(cx - bw/2, by, bw, bh);
+        // Clip to shape with a simple second pass
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // ------ State ------
+    let state = null;
+    function freshState() {
+      return {
+        active: false, nLevel: 1, maxN: 1,
+        score: 0, streak: 0, bestStreak: 0,
+        history: [], itemIdx: 0, awaitingDecision: false, currentShape: null,
+        correct: 0, attempted: 0, rts: [], roundStart: 0,
+        questionTimer: null, totalTimer: null, totalLeft: TOTAL,
+        revealTimer: null,
+      };
+    }
+
+    // ------ Generation logic ------
+    // Target a 33% match rate at the current N-level. Inject lures at n±1
+    // sometimes to make the task harder than typical n-back.
+    function nextShape() {
+      const n = state.nLevel;
+      const need = state.history.length;
+      // Need at least n items before decisions matter
+      if (need < n) {
+        const s = makeShape(); state.history.push(s); return s;
+      }
+      const targetMatchRate = 0.33;
+      const wantMatch = Math.random() < targetMatchRate;
+      const lureRate = Math.min(0.30, 0.10 + state.nLevel*0.05);
+      const wantLure = !wantMatch && Math.random() < lureRate;
+      const target = state.history[state.history.length - n];
+
+      let s;
+      if (wantMatch) {
+        s = { ...target };
+      } else if (wantLure) {
+        // Pick item at n-1 or n+1 (if exists) and copy it (a near-miss in time)
+        const offsets = [];
+        if (state.history.length - (n-1) - 1 >= 0) offsets.push(n-1);
+        if (state.history.length - (n+1) >= 0) offsets.push(n+1);
+        const off = offsets[Math.floor(Math.random()*offsets.length)] || n;
+        const lure = state.history[state.history.length - off];
+        if (lure && !shapeEqual(lure, target)) {
+          s = { ...lure };
+        } else {
+          s = makeShape();
+          while (shapeEqual(s, target)) s = makeShape();
+        }
+      } else {
+        s = makeShape();
+        while (shapeEqual(s, target)) s = makeShape();
+      }
+      state.history.push(s);
+      return s;
+    }
+
+    function isMatchNow() {
+      const n = state.nLevel;
+      if (state.history.length < n + 1) return null;
+      const a = state.history[state.history.length - 1];
+      const b = state.history[state.history.length - 1 - n];
+      return shapeEqual(a, b);
+    }
+
+    // ------ Game loop ------
+    function startGame() {
+      state = freshState();
+      state.active = true;
+      els.nback.textContent = state.nLevel;
+      els.score.textContent = '0';
+      els.streak.textContent = '0';
+      els.iCount.textContent = '0';
+      els.rule.innerHTML = `Decide if the shape matches the one from <b>${state.nLevel}-back</b>.`;
+      enableButtons(false);
+      startTotalTimer();
+      nextTrial();
+      els.start.textContent = 'Restart';
+    }
+
+    function nextTrial() {
+      if (!state.active) return;
+      const s = nextShape();
+      state.currentShape = s;
+      state.itemIdx++;
+      els.iCount.textContent = state.itemIdx;
+      drawShape(s);
+      beep(500 + state.itemIdx*8, 0.05, 'sine', 0.025);
+
+      const earlyPhase = state.history.length <= state.nLevel; // can't yet decide
+      if (earlyPhase) {
+        els.rule.innerHTML = `Building up… <b>${state.nLevel - state.history.length + 1}</b> more before decisions.`;
+        enableButtons(false);
+        clearInterval(state.questionTimer);
+        const view = 1100;
+        let t = view;
+        els.progress.style.width = '100%';
+        state.questionTimer = setInterval(() => {
+          if (!state.active) { clearInterval(state.questionTimer); return; }
+          t -= 100; if (t < 0) t = 0;
+          els.progress.style.width = (t/view*100) + '%';
+          if (t === 0) { clearInterval(state.questionTimer); drawShape(null); setTimeout(()=>{if (state.active) nextTrial();}, 250); }
+        }, 100);
+        return;
+      }
+
+      els.rule.innerHTML = `Match the shape <b>${state.nLevel}</b> step${state.nLevel===1?'':'s'} ago? (<span class="kbd">M</span>/<span class="kbd">N</span>)`;
+      enableButtons(true);
+      state.awaitingDecision = true;
+      state.roundStart = performance.now();
+      const view = Math.max(1400, 2400 - state.nLevel*200);
+      let t = view;
+      els.progress.style.width = '100%';
+      clearInterval(state.questionTimer);
+      state.questionTimer = setInterval(() => {
+        if (!state.active) { clearInterval(state.questionTimer); return; }
+        t -= 100; if (t < 0) t = 0;
+        els.progress.style.width = (t/view*100) + '%';
+        if (t === 0) {
+          clearInterval(state.questionTimer);
+          if (state.awaitingDecision) onDecision(null); // timeout
+        }
+      }, 100);
+    }
+
+    function onDecision(userSaidMatch) {
+      if (!state.active || !state.awaitingDecision) return;
+      state.awaitingDecision = false;
+      enableButtons(false);
+      const truth = isMatchNow();
+      const rt = (performance.now() - state.roundStart)/1000;
+      state.attempted++;
+      const ok = userSaidMatch !== null && userSaidMatch === truth;
+      if (ok) {
+        state.correct++;
+        state.rts.push(rt);
+        beep(900, 0.08, 'sine', 0.05);
+        state.streak++;
+        state.bestStreak = Math.max(state.bestStreak, state.streak);
+        const speedBonus = Math.max(0.5, 1.4 - rt/3);
+        const pts = Math.round(60 * state.nLevel * speedBonus * (1 + Math.min(state.streak,9)*0.05));
+        state.score += pts;
+        els.status.textContent = `Correct +${pts}`;
+        els.status.className = 'status ok';
+        // Adaptive: every 4-correct streak at the current N → bump N
+        if (state.streak > 0 && state.streak % 4 === 0) {
+          state.nLevel = Math.min(6, state.nLevel + 1);
+          state.maxN = Math.max(state.maxN, state.nLevel);
+          els.nback.textContent = state.nLevel;
+        }
+      } else {
+        beep(180, 0.18, 'square', 0.05);
+        state.streak = 0;
+        els.status.textContent = userSaidMatch === null
+          ? 'Time up!'
+          : (truth ? 'Wrong — that was a match.' : 'Wrong — not a match.');
+        els.status.className = 'status fail';
+        // On a miss at N>1, ratchet down
+        if (state.nLevel > 1) {
+          state.nLevel--;
+          els.nback.textContent = state.nLevel;
+        }
+      }
+      els.score.textContent = state.score;
+      els.streak.textContent = state.streak;
+      // brief pause then advance
+      setTimeout(() => {
+        if (!state.active) return;
+        drawShape(null);
+        setTimeout(() => { if (state.active) nextTrial(); }, 220);
+      }, 380);
+    }
+
+    function enableButtons(on) {
+      els.btnMatch.disabled = !on;
+      els.btnNo.disabled = !on;
+    }
+
+    // ------ Timers ------
+    function fmtTime(s) { const m=Math.floor(s/60).toString().padStart(2,'0'); const r=(s%60).toString().padStart(2,'0'); return m+':'+r; }
+    function startTotalTimer() {
+      els.totalClock.textContent = fmtTime(state.totalLeft);
+      clearInterval(state.totalTimer);
+      state.totalTimer = setInterval(() => {
+        if (!state.active) { clearInterval(state.totalTimer); return; }
+        state.totalLeft--;
+        els.totalClock.textContent = fmtTime(state.totalLeft);
+        if (state.totalLeft <= 0) endGame();
+      }, 1000);
+    }
+
+    function endGame() {
+      state.active = false;
+      clearInterval(state.questionTimer);
+      clearInterval(state.totalTimer);
+      enableButtons(false);
+      drawShape(null);
+      const acc = state.attempted === 0 ? 0 : state.correct / state.attempted;
+      const sorted = state.rts.slice().sort((a,b)=>a-b);
+      const med = sorted.length ? sorted[Math.floor(sorted.length/2)] : null;
+
+      const key = 'hvp.best.' + GAME;
+      let prev = null;
+      try { prev = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
+      const newRun = {
+        score: state.score, level: state.maxN, accuracy: acc,
+        correct: state.correct, attempted: state.attempted,
+        rtMedian: med, runs: (prev && prev.runs ? prev.runs : 0) + 1, at: Date.now()
+      };
+      let isPb = false;
+      if (!prev || newRun.score > (prev.score || 0)) { isPb = true; localStorage.setItem(key, JSON.stringify(newRun)); }
+      else { prev.runs = newRun.runs; localStorage.setItem(key, JSON.stringify(prev)); }
+      els.mScore.textContent = state.score.toLocaleString();
+      els.mLevel.textContent = state.maxN;
+      els.mAcc.textContent = Math.round(acc*100) + '%';
+      els.mCnt.textContent = `${state.correct} / ${state.attempted}`;
+      els.mRt.textContent = med == null ? '—' : med.toFixed(2) + 's';
+      els.pbFlag.style.display = isPb ? 'inline-block' : 'none';
+      els.modalBack.classList.add('show');
+    }
+
+    // ------ Bindings ------
+    els.start.addEventListener('click', startGame);
+    els.reset.addEventListener('click', () => {
+      if (state) { state.active = false; clearInterval(state.questionTimer); clearInterval(state.totalTimer); }
+      state = freshState();
+      drawShape(null);
+      els.status.textContent = '';
+      els.nback.textContent = '1'; els.score.textContent = '0'; els.streak.textContent = '0';
+      els.iCount.textContent = '0';
+      els.totalClock.textContent = fmtTime(TOTAL); els.progress.style.width = '100%';
+      els.start.textContent = 'Start Game';
+    });
+    els.btnMatch.addEventListener('click', () => { onDecision(true);  flash(els.btnMatch); });
+    els.btnNo.addEventListener('click',    () => { onDecision(false); flash(els.btnNo); });
+    function flash(b){ b.classList.add('flash'); setTimeout(()=>b.classList.remove('flash'), 150); }
+    els.mAgain.addEventListener('click', () => { els.modalBack.classList.remove('show'); startGame(); });
+    window.addEventListener('keydown', (e) => {
+      if (!state || !state.active) return;
+      if (e.key === 'm' || e.key === 'M') { onDecision(true);  flash(els.btnMatch); e.preventDefault(); }
+      if (e.key === 'n' || e.key === 'N') { onDecision(false); flash(els.btnNo); e.preventDefault(); }
+    });
+
+    state = freshState();
+    drawShape(null);
+    els.totalClock.textContent = fmtTime(TOTAL);
+  })();
+  </script>
+</body>
+</html>

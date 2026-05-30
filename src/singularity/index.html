@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Singularity · HireVue Practice</title>
+  <style>
+    :root {
+      --bg:#0b0f17; --panel:#131a24; --panel-2:#1a2330; --border:#233146;
+      --text:#e6edf3; --muted:#8b97a8; --accent:#2f81f7; --accent-2:#5dd5c4;
+      --ok:#22c55e; --warn:#eab308; --bad:#ef4444;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .wrap { max-width: 820px; margin: 0 auto; padding: 60px 20px 40px; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 24px; }
+    h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.3px; }
+    .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+    .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .progress-wrap { flex: 1; height: 10px; background: #0a1018; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+    .progress-bar { height: 100%; width: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .1s linear; }
+    .clock { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; min-width: 50px; text-align: right; }
+    .switch { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
+    .switch input { accent-color: var(--accent); }
+    .meta-row { display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px; gap: 10px; flex-wrap: wrap; }
+    .chip { display:inline-block; background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px; padding: 5px 10px; font-size: 12px; color: var(--text); }
+    .chip b { color: var(--accent-2); font-weight: 600; }
+    .field {
+      background: #0a1018; border: 1px solid var(--border); border-radius: 14px; padding: 12px;
+      display: grid; gap: 8px; margin: 0 auto; width: fit-content;
+    }
+    .cell { display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 8px; transition: background .1s ease; }
+    .cell:hover { background: rgba(47,129,247,0.10); }
+    .cell.right { background: rgba(34,197,94,0.25); }
+    .cell.wrong { background: rgba(239,68,68,0.25); }
+    .cell svg { display: block; }
+    .cell.spin svg { animation: spin 6s linear infinite; }
+    .cell.drift svg { animation: drift 3s ease-in-out infinite alternate; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes drift { from { transform: translateX(-4px) rotate(-3deg); } to { transform: translateX(4px) rotate(3deg); } }
+    .status { margin-top: 12px; min-height: 22px; font-size: 14px; text-align: center; }
+    .ok { color: var(--ok); }
+    .fail { color: var(--bad); }
+    .actions { display: flex; gap: 8px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+    button { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); padding: 10px 16px; border-radius: 10px; cursor: pointer; font-size: 14px; }
+    button.primary { background: linear-gradient(180deg, var(--accent), #1c66cf); border-color: transparent; }
+    .helper { color: var(--muted); font-size: 12px; margin-top: 6px; text-align: center; }
+    .back-btn { position: fixed; top: 14px; left: 14px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; background: var(--panel); color:var(--text); border:1px solid var(--border); border-radius: 999px; text-decoration: none; z-index: 10; }
+    .modal-back { position: fixed; inset: 0; background: rgba(2,6,12,0.7); display: none; align-items: center; justify-content: center; z-index: 20; backdrop-filter: blur(6px); }
+    .modal-back.show { display: flex; }
+    .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 24px; max-width: 460px; width: 90%; }
+    .modal h2 { margin: 0 0 6px; font-size: 22px; }
+    .modal .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 14px; }
+    .modal .row:last-child { border-bottom: 0; }
+    .modal .row b { color: var(--accent-2); }
+    .pb-flag { display: inline-block; background: rgba(34,197,94,0.15); color: var(--ok); padding: 4px 8px; border-radius: 999px; font-size: 12px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <a class="back-btn" href="../" aria-label="Back to hub">←</a>
+
+  <div class="wrap">
+    <div class="panel">
+      <h1>Singularity</h1>
+      <div class="subtitle">Click the one unique shape. Rotation alone does <b>not</b> count.</div>
+
+      <div class="topbar">
+        <div class="progress-wrap"><div id="progress" class="progress-bar"></div></div>
+        <div class="clock" id="totalClock" title="Total time">03:00</div>
+        <label class="switch"><input type="checkbox" id="sound" checked> Sound</label>
+      </div>
+
+      <div class="meta-row">
+        <div>
+          <span class="chip">Level <b id="lvl">1</b></span>
+          <span class="chip">Score <b id="score">0</b></span>
+          <span class="chip">Streak <b id="streak">0</b></span>
+        </div>
+        <div>
+          <span class="chip">Tiles <b id="tilesChip">9</b></span>
+        </div>
+      </div>
+
+      <div class="field" id="field"></div>
+
+      <div class="status" id="status"></div>
+
+      <div class="actions">
+        <button id="start" class="primary">Start Game</button>
+        <button id="reset">Reset</button>
+      </div>
+      <div class="helper">Scan systematically (e.g. left-to-right). Don't be fooled by rotated lookalikes.</div>
+    </div>
+  </div>
+
+  <div class="modal-back" id="modalBack">
+    <div class="modal">
+      <h2>Session complete</h2>
+      <div class="subtitle">Here's how you did this run.</div>
+      <div class="row"><span>Final score</span><b id="mScore">0</b></div>
+      <div class="row"><span>Max level reached</span><b id="mLevel">1</b></div>
+      <div class="row"><span>Accuracy</span><b id="mAcc">0%</b></div>
+      <div class="row"><span>Correct / Attempted</span><b id="mCnt">0 / 0</b></div>
+      <div class="row"><span>Median response time</span><b id="mRt">—</b></div>
+      <div id="pbFlag" class="pb-flag" style="display:none">New personal best!</div>
+      <div class="actions">
+        <button class="primary" id="mAgain">Play again</button>
+        <a href="../" style="text-decoration:none;"><button>Back to hub</button></a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    const GAME = 'singularity';
+    const TOTAL = 180;
+    const $ = (id) => document.getElementById(id);
+
+    const els = {
+      field: $('field'), status: $('status'),
+      progress: $('progress'), totalClock: $('totalClock'),
+      lvl: $('lvl'), score: $('score'), streak: $('streak'), tilesChip: $('tilesChip'),
+      start: $('start'), reset: $('reset'), sound: $('sound'),
+      modalBack: $('modalBack'),
+      mScore: $('mScore'), mLevel: $('mLevel'), mAcc: $('mAcc'), mCnt: $('mCnt'), mRt: $('mRt'),
+      pbFlag: $('pbFlag'), mAgain: $('mAgain'),
+    };
+
+    function beep(freq=440, dur=0.08, type='sine', vol=0.05) {
+      if (!els.sound.checked) return;
+      try {
+        const c = beep._ctx || (beep._ctx = new (window.AudioContext || window.webkitAudioContext)());
+        const o = c.createOscillator(); const g = c.createGain();
+        o.type = type; o.frequency.value = freq; g.gain.value = vol;
+        o.connect(g); g.connect(c.destination); o.start();
+        g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + dur);
+        o.stop(c.currentTime + dur);
+      } catch(e) {}
+    }
+
+    // ------ Shape vocabulary ------
+    const FORMS = ['circle','square','triangle','diamond','pentagon','hexagon','star','plus','arrow'];
+    const COLORS = ['#ef4444','#2f81f7','#22c55e','#eab308','#a855f7','#06b6d4','#f97316'];
+    const FILLS  = ['solid','outline','half-top','half-bottom','dot'];
+
+    // shape identity = form + color + fill (rotation excluded)
+    function R(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+    function pick(arr){ return arr[R(0,arr.length-1)]; }
+
+    function makeBase(palette) {
+      return {
+        form: pick(palette.forms),
+        color: pick(palette.colors),
+        fill: pick(palette.fills),
+      };
+    }
+    function shapeEqual(a,b){ return a.form===b.form && a.color===b.color && a.fill===b.fill; }
+
+    // Mutate base on exactly k axes (1 or 2)
+    function mutateForUnique(base, palette, axes=1) {
+      const all = ['form','color','fill'];
+      const ax = all.slice().sort(()=>Math.random()-0.5).slice(0, axes);
+      const u = { ...base };
+      for (const a of ax) {
+        const pool = palette[a + 's'];
+        let v = pick(pool);
+        while (v === u[a]) v = pick(pool);
+        u[a] = v;
+      }
+      return u;
+    }
+
+    // ------ Level spec ------
+    function spec(lvl) {
+      // size of grid (n x n), and how subtle the unique difference is (axes:1=easier, with smaller palette)
+      // and motion: at high levels, some cells spin
+      if (lvl <= 2) return { n: 3, palette: { forms: FORMS.slice(0,3), colors: COLORS.slice(0,3), fills: ['solid','outline'] }, axes: 1, spinChance: 0, driftChance: 0 };
+      if (lvl <= 4) return { n: 4, palette: { forms: FORMS.slice(0,4), colors: COLORS.slice(0,4), fills: ['solid','outline'] }, axes: 1, spinChance: 0, driftChance: 0 };
+      if (lvl <= 6) return { n: 4, palette: { forms: FORMS.slice(0,5), colors: COLORS.slice(0,4), fills: ['solid','outline','half-top'] }, axes: 1, spinChance: 0.15, driftChance: 0 };
+      if (lvl <= 8) return { n: 5, palette: { forms: FORMS.slice(0,6), colors: COLORS.slice(0,5), fills: ['solid','outline','half-top','half-bottom'] }, axes: 1, spinChance: 0.2, driftChance: 0 };
+      if (lvl <= 10) return { n: 5, palette: { forms: FORMS, colors: COLORS, fills: FILLS }, axes: 1, spinChance: 0.25, driftChance: 0.1 };
+      if (lvl <= 12) return { n: 6, palette: { forms: FORMS, colors: COLORS, fills: FILLS }, axes: 1, spinChance: 0.3, driftChance: 0.15 };
+      if (lvl <= 14) return { n: 6, palette: { forms: FORMS, colors: COLORS, fills: FILLS }, axes: 1, spinChance: 0.35, driftChance: 0.2 };
+      if (lvl <= 16) return { n: 7, palette: { forms: FORMS, colors: COLORS, fills: FILLS }, axes: 1, spinChance: 0.35, driftChance: 0.2 };
+      return { n: 8, palette: { forms: FORMS, colors: COLORS, fills: FILLS }, axes: 1, spinChance: 0.4, driftChance: 0.25 };
+    }
+
+    // ------ Render shape to SVG string ------
+    function shapeSvg(s, sizePx) {
+      const w = sizePx, h = sizePx;
+      const cx = w/2, cy = h/2, r = Math.min(w,h)*0.36;
+      const color = s.color;
+      const sw = Math.max(2, sizePx*0.10);
+
+      // path generators
+      const path = {};
+      path.circle = `<circle cx="${cx}" cy="${cy}" r="${r}" />`;
+      path.square = `<rect x="${cx-r}" y="${cy-r}" width="${r*2}" height="${r*2}" />`;
+      path.triangle = (() => {
+        const a = r*1.1;
+        return `<polygon points="${cx},${cy-a} ${cx-a*0.95},${cy+a*0.7} ${cx+a*0.95},${cy+a*0.7}" />`;
+      })();
+      path.diamond = `<polygon points="${cx},${cy-r} ${cx+r},${cy} ${cx},${cy+r} ${cx-r},${cy}" />`;
+      path.pentagon = (() => {
+        const pts = [];
+        for (let i=0;i<5;i++) { const a = -Math.PI/2 + i*Math.PI*2/5; pts.push((cx + r*Math.cos(a)).toFixed(1) + ',' + (cy + r*Math.sin(a)).toFixed(1)); }
+        return `<polygon points="${pts.join(' ')}" />`;
+      })();
+      path.hexagon = (() => {
+        const pts = [];
+        for (let i=0;i<6;i++) { const a = i*Math.PI/3; pts.push((cx + r*Math.cos(a)).toFixed(1) + ',' + (cy + r*Math.sin(a)).toFixed(1)); }
+        return `<polygon points="${pts.join(' ')}" />`;
+      })();
+      path.star = (() => {
+        const pts = [];
+        for (let i=0;i<10;i++) {
+          const rad = (i%2===0) ? r : r*0.45;
+          const a = -Math.PI/2 + i*Math.PI/5;
+          pts.push((cx + rad*Math.cos(a)).toFixed(1) + ',' + (cy + rad*Math.sin(a)).toFixed(1));
+        }
+        return `<polygon points="${pts.join(' ')}" />`;
+      })();
+      path.plus = (() => {
+        const t = r*0.4;
+        return `<polygon points="${cx-t},${cy-r} ${cx+t},${cy-r} ${cx+t},${cy-t} ${cx+r},${cy-t} ${cx+r},${cy+t} ${cx+t},${cy+t} ${cx+t},${cy+r} ${cx-t},${cy+r} ${cx-t},${cy+t} ${cx-r},${cy+t} ${cx-r},${cy-t} ${cx-t},${cy-t}" />`;
+      })();
+      path.arrow = (() => {
+        // arrow pointing right
+        const t = r*0.35;
+        return `<polygon points="${cx-r},${cy-t} ${cx+r*0.3},${cy-t} ${cx+r*0.3},${cy-r*0.7} ${cx+r},${cy} ${cx+r*0.3},${cy+r*0.7} ${cx+r*0.3},${cy+t} ${cx-r},${cy+t}" />`;
+      })();
+
+      let body = path[s.form];
+      let style = '';
+      if (s.fill === 'solid') style = `fill="${color}" stroke="none"`;
+      else if (s.fill === 'outline') style = `fill="none" stroke="${color}" stroke-width="${sw}"`;
+      // half-top / half-bottom / dot are handled below with their own SVG layouts
+      if (s.fill === 'half-top') {
+        const id = 'c' + Math.floor(Math.random()*1e6);
+        body = body.replace('/>',` fill="${color}" clip-path="url(#${id})"/>`);
+        const clipDef = `<defs><clipPath id="${id}"><rect x="0" y="0" width="${w}" height="${cy}"/></clipPath></defs>`;
+        const outline = path[s.form].replace('/>', ` fill="none" stroke="${color}" stroke-width="${Math.max(2, sw*0.6)}"/>`);
+        return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${clipDef}${outline}${body}</svg>`;
+      }
+      if (s.fill === 'half-bottom') {
+        const id = 'c' + Math.floor(Math.random()*1e6);
+        body = body.replace('/>',` fill="${color}" clip-path="url(#${id})"/>`);
+        const clipDef = `<defs><clipPath id="${id}"><rect x="0" y="${cy}" width="${w}" height="${cy}"/></clipPath></defs>`;
+        const outline = path[s.form].replace('/>', ` fill="none" stroke="${color}" stroke-width="${Math.max(2, sw*0.6)}"/>`);
+        return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${clipDef}${outline}${body}</svg>`;
+      }
+      if (s.fill === 'dot') {
+        const outline = path[s.form].replace('/>', ` fill="none" stroke="${color}" stroke-width="${sw}"/>`);
+        const dot = `<circle cx="${cx}" cy="${cy}" r="${r*0.25}" fill="${color}"/>`;
+        return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${outline}${dot}</svg>`;
+      }
+      // solid / outline
+      body = body.replace('/>', ' ' + style + '/>');
+      return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${body}</svg>`;
+    }
+
+    // ------ State ------
+    let state = null;
+    function freshState() {
+      return {
+        active: false, level: 1, maxLevel: 1,
+        score: 0, streak: 0, bestStreak: 0,
+        correct: 0, attempted: 0, rts: [],
+        round: null, uniqueIdx: -1, roundStart: 0,
+        questionTimer: null, totalTimer: null, totalLeft: TOTAL,
+      };
+    }
+
+    function buildRound() {
+      const sp = spec(state.level);
+      const n = sp.n, total = n*n;
+      const base = makeBase(sp.palette);
+      const unique = mutateForUnique(base, sp.palette, sp.axes);
+      // Ensure unique really differs in identity
+      while (shapeEqual(base, unique)) Object.assign(unique, mutateForUnique(base, sp.palette, sp.axes));
+
+      const cells = [];
+      const uniqueAt = R(0, total - 1);
+      for (let i=0;i<total;i++) {
+        if (i === uniqueAt) {
+          cells.push({
+            shape: unique,
+            rotate: R(0,3)*90,
+            spin: Math.random() < sp.spinChance,
+            drift: Math.random() < sp.driftChance,
+          });
+        } else {
+          cells.push({
+            shape: base,
+            rotate: R(0,3)*90,
+            spin: Math.random() < sp.spinChance,
+            drift: Math.random() < sp.driftChance,
+          });
+        }
+      }
+      state.uniqueIdx = uniqueAt;
+      state.round = { cells, n };
+      els.tilesChip.textContent = total;
+    }
+
+    function render() {
+      const { cells, n } = state.round;
+      els.field.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+      els.field.innerHTML = '';
+      const cellPx = Math.max(46, Math.min(82, Math.floor(520 / n)));
+      cells.forEach((c, idx) => {
+        const div = document.createElement('div');
+        div.className = 'cell' + (c.spin ? ' spin' : '') + (c.drift ? ' drift' : '');
+        div.style.width = cellPx + 'px'; div.style.height = cellPx + 'px';
+        div.innerHTML = `<div style="transform: rotate(${c.rotate}deg)">${shapeSvg(c.shape, Math.floor(cellPx*0.85))}</div>`;
+        div.addEventListener('click', () => onClick(idx));
+        els.field.appendChild(div);
+      });
+      els.lvl.textContent = state.level;
+      els.score.textContent = state.score;
+      els.streak.textContent = state.streak;
+      state.roundStart = performance.now();
+      startQuestionTimer();
+    }
+
+    function onClick(idx) {
+      if (!state.active) return;
+      clearInterval(state.questionTimer);
+      state.attempted++;
+      const rt = (performance.now() - state.roundStart)/1000;
+      const cell = els.field.children[idx];
+      if (idx === state.uniqueIdx) {
+        state.correct++;
+        state.rts.push(rt);
+        state.streak++;
+        state.bestStreak = Math.max(state.bestStreak, state.streak);
+        cell.classList.add('right');
+        beep(880, 0.12, 'sine', 0.06);
+        const speedBonus = Math.max(0.4, 1.6 - rt/8);
+        const pts = Math.round(100 * state.level * speedBonus * (1 + Math.min(state.streak,9)*0.05));
+        state.score += pts;
+        els.status.textContent = `Correct! +${pts} (${rt.toFixed(1)}s)`;
+        els.status.className = 'status ok';
+        if (state.streak >= 2) { state.level = Math.min(18, state.level + 1); state.maxLevel = Math.max(state.maxLevel, state.level); }
+        setTimeout(() => { if (state.active) { buildRound(); render(); } }, 600);
+      } else {
+        cell.classList.add('wrong');
+        els.field.children[state.uniqueIdx].classList.add('right');
+        beep(180, 0.18, 'square', 0.05);
+        state.streak = 0;
+        els.status.textContent = 'Wrong — that wasn\'t the unique one.';
+        els.status.className = 'status fail';
+        setTimeout(() => {
+          if (!state.active) return;
+          state.level = Math.max(1, state.level - 1);
+          buildRound(); render();
+        }, 900);
+      }
+    }
+
+    function startQuestionTimer() {
+      const budget = Math.max(8, 25 - state.level * 0.9);
+      let t = budget;
+      els.progress.style.width = '100%';
+      clearInterval(state.questionTimer);
+      state.questionTimer = setInterval(() => {
+        if (!state.active) { clearInterval(state.questionTimer); return; }
+        t -= 0.1; if (t < 0) t = 0;
+        els.progress.style.width = (t/budget*100) + '%';
+        if (t === 0) {
+          clearInterval(state.questionTimer);
+          state.attempted++; state.streak = 0;
+          els.status.textContent = 'Time up!'; els.status.className = 'status fail';
+          els.field.children[state.uniqueIdx].classList.add('right');
+          setTimeout(() => { if (state.active) { state.level = Math.max(1, state.level-1); buildRound(); render(); } }, 900);
+        }
+      }, 100);
+    }
+
+    function fmtTime(s) { const m=Math.floor(s/60).toString().padStart(2,'0'); const r=(s%60).toString().padStart(2,'0'); return m+':'+r; }
+    function startTotalTimer() {
+      els.totalClock.textContent = fmtTime(state.totalLeft);
+      clearInterval(state.totalTimer);
+      state.totalTimer = setInterval(() => {
+        if (!state.active) { clearInterval(state.totalTimer); return; }
+        state.totalLeft--;
+        els.totalClock.textContent = fmtTime(state.totalLeft);
+        if (state.totalLeft <= 0) endGame();
+      }, 1000);
+    }
+
+    function startGame() {
+      state = freshState();
+      state.active = true;
+      buildRound(); render();
+      startTotalTimer();
+      els.start.textContent = 'Restart';
+    }
+    function endGame() {
+      state.active = false;
+      clearInterval(state.questionTimer);
+      clearInterval(state.totalTimer);
+      const acc = state.attempted === 0 ? 0 : state.correct/state.attempted;
+      const sorted = state.rts.slice().sort((a,b)=>a-b);
+      const med = sorted.length ? sorted[Math.floor(sorted.length/2)] : null;
+      const key = 'hvp.best.' + GAME;
+      let prev = null;
+      try { prev = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
+      const newRun = {
+        score: state.score, level: state.maxLevel, accuracy: acc,
+        correct: state.correct, attempted: state.attempted,
+        rtMedian: med, runs: (prev && prev.runs ? prev.runs : 0) + 1, at: Date.now()
+      };
+      let isPb = false;
+      if (!prev || newRun.score > (prev.score || 0)) { isPb = true; localStorage.setItem(key, JSON.stringify(newRun)); }
+      else { prev.runs = newRun.runs; localStorage.setItem(key, JSON.stringify(prev)); }
+      els.mScore.textContent = state.score.toLocaleString();
+      els.mLevel.textContent = state.maxLevel;
+      els.mAcc.textContent = Math.round(acc*100) + '%';
+      els.mCnt.textContent = `${state.correct} / ${state.attempted}`;
+      els.mRt.textContent = med == null ? '—' : med.toFixed(2) + 's';
+      els.pbFlag.style.display = isPb ? 'inline-block' : 'none';
+      els.modalBack.classList.add('show');
+    }
+
+    // Bindings
+    els.start.addEventListener('click', startGame);
+    els.reset.addEventListener('click', () => {
+      if (state) { state.active = false; clearInterval(state.questionTimer); clearInterval(state.totalTimer); }
+      state = freshState();
+      els.field.innerHTML = ''; els.status.textContent = '';
+      els.lvl.textContent='1'; els.score.textContent='0'; els.streak.textContent='0'; els.tilesChip.textContent='9';
+      els.totalClock.textContent = fmtTime(TOTAL); els.progress.style.width = '100%';
+      els.start.textContent = 'Start Game';
+    });
+    els.mAgain.addEventListener('click', () => { els.modalBack.classList.remove('show'); startGame(); });
+
+    state = freshState();
+    els.totalClock.textContent = fmtTime(TOTAL);
+  })();
+  </script>
+</body>
+</html>

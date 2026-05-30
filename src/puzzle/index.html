@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Puzzle · HireVue Practice</title>
+  <style>
+    :root {
+      --bg:#0b0f17; --panel:#131a24; --panel-2:#1a2330; --border:#233146;
+      --text:#e6edf3; --muted:#8b97a8; --accent:#2f81f7; --accent-2:#5dd5c4;
+      --ok:#22c55e; --warn:#eab308; --bad:#ef4444;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 60px 20px 40px; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 24px; }
+    h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.3px; }
+    .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+    .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .progress-wrap { flex: 1; height: 10px; background: #0a1018; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+    .progress-bar { height: 100%; width: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .1s linear; }
+    .clock { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; min-width: 50px; text-align: right; }
+    .switch { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
+    .switch input { accent-color: var(--accent); }
+    .meta-row { display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px; gap: 10px; flex-wrap: wrap; }
+    .chip { display:inline-block; background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px; padding: 5px 10px; font-size: 12px; color: var(--text); }
+    .chip b { color: var(--accent-2); font-weight: 600; }
+    .stage-row { display: flex; gap: 14px; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
+    .preview { background: #0a1018; border: 1px solid var(--border); border-radius: 12px; padding: 8px; }
+    .preview .label { font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 4px; }
+    .preview canvas { width: 130px; height: 130px; display: block; border-radius: 6px; }
+    .board { background: #0a1018; border: 1px solid var(--border); border-radius: 12px; padding: 6px; position: relative; }
+    .board canvas { display: block; }
+    .tile { position: absolute; cursor: pointer; transition: transform .15s ease; border-radius: 4px; overflow: hidden; outline: 1px solid rgba(0,0,0,0.4); }
+    .tile canvas { display: block; pointer-events: none; }
+    .tile.selected { outline: 3px solid var(--accent); outline-offset: -3px; z-index: 2; transform: scale(1.04); }
+    .tile.correct::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 0 2px var(--ok); border-radius: 4px; pointer-events: none; }
+    .status { margin-top: 12px; min-height: 22px; font-size: 14px; text-align: center; }
+    .ok { color: var(--ok); }
+    .fail { color: var(--bad); }
+    .actions { display: flex; gap: 8px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+    button { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); padding: 10px 16px; border-radius: 10px; cursor: pointer; font-size: 14px; }
+    button.primary { background: linear-gradient(180deg, var(--accent), #1c66cf); border-color: transparent; }
+    .helper { color: var(--muted); font-size: 12px; margin-top: 6px; text-align: center; }
+    .back-btn { position: fixed; top: 14px; left: 14px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; background: var(--panel); color:var(--text); border:1px solid var(--border); border-radius: 999px; text-decoration: none; z-index: 10; }
+    .modal-back { position: fixed; inset: 0; background: rgba(2,6,12,0.7); display: none; align-items: center; justify-content: center; z-index: 20; backdrop-filter: blur(6px); }
+    .modal-back.show { display: flex; }
+    .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 24px; max-width: 460px; width: 90%; }
+    .modal h2 { margin: 0 0 6px; font-size: 22px; }
+    .modal .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 14px; }
+    .modal .row:last-child { border-bottom: 0; }
+    .modal .row b { color: var(--accent-2); }
+    .pb-flag { display: inline-block; background: rgba(34,197,94,0.15); color: var(--ok); padding: 4px 8px; border-radius: 999px; font-size: 12px; margin-top: 10px; }
+    .memorise-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(11,15,23,0.7); border-radius: 10px; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <a class="back-btn" href="../" aria-label="Back to hub">←</a>
+
+  <div class="wrap">
+    <div class="panel">
+      <h1>Puzzle</h1>
+      <div class="subtitle">Memorize the picture, then swap tiles to rebuild it.</div>
+
+      <div class="topbar">
+        <div class="progress-wrap"><div id="progress" class="progress-bar"></div></div>
+        <div class="clock" id="totalClock" title="Total time">03:00</div>
+        <label class="switch"><input type="checkbox" id="sound" checked> Sound</label>
+      </div>
+
+      <div class="meta-row">
+        <div>
+          <span class="chip">Level <b id="lvl">1</b></span>
+          <span class="chip">Score <b id="score">0</b></span>
+          <span class="chip">Moves <b id="moves">0</b></span>
+          <span class="chip">Solved <b id="solved">0</b></span>
+        </div>
+        <div>
+          <span class="chip">Grid <b id="gridChip">3×3</b></span>
+        </div>
+      </div>
+
+      <div class="stage-row">
+        <div class="preview" id="previewWrap">
+          <div class="label">Reference</div>
+          <canvas id="preview"></canvas>
+        </div>
+        <div class="board" id="board"><canvas id="boardBg"></canvas></div>
+      </div>
+
+      <div class="status" id="status"></div>
+
+      <div class="actions">
+        <button id="start" class="primary">Start Game</button>
+        <button id="reset">Reset</button>
+        <label class="switch"><input type="checkbox" id="hideRef"> Hide reference (hard mode)</label>
+      </div>
+      <div class="helper">Click two tiles to swap them. Reference is shown after memorise phase.</div>
+    </div>
+  </div>
+
+  <div class="modal-back" id="modalBack">
+    <div class="modal">
+      <h2>Session complete</h2>
+      <div class="subtitle">Here's how you did this run.</div>
+      <div class="row"><span>Final score</span><b id="mScore">0</b></div>
+      <div class="row"><span>Max grid solved</span><b id="mLevel">3×3</b></div>
+      <div class="row"><span>Puzzles solved</span><b id="mSolved">0</b></div>
+      <div class="row"><span>Median solve time</span><b id="mRt">—</b></div>
+      <div id="pbFlag" class="pb-flag" style="display:none">New personal best!</div>
+      <div class="actions">
+        <button class="primary" id="mAgain">Play again</button>
+        <a href="../" style="text-decoration:none;"><button>Back to hub</button></a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    const GAME = 'puzzle';
+    const TOTAL = 180;
+    const $ = (id) => document.getElementById(id);
+
+    const els = {
+      preview: $('preview'), previewWrap: $('previewWrap'),
+      board: $('board'), boardBg: $('boardBg'),
+      status: $('status'),
+      progress: $('progress'), totalClock: $('totalClock'),
+      lvl: $('lvl'), score: $('score'), moves: $('moves'), solved: $('solved'), gridChip: $('gridChip'),
+      start: $('start'), reset: $('reset'), sound: $('sound'), hideRef: $('hideRef'),
+      modalBack: $('modalBack'),
+      mScore: $('mScore'), mLevel: $('mLevel'), mSolved: $('mSolved'), mRt: $('mRt'),
+      pbFlag: $('pbFlag'), mAgain: $('mAgain'),
+    };
+
+    function beep(freq=440, dur=0.08, type='sine', vol=0.05) {
+      if (!els.sound.checked) return;
+      try {
+        const c = beep._ctx || (beep._ctx = new (window.AudioContext || window.webkitAudioContext)());
+        const o = c.createOscillator(); const g = c.createGain();
+        o.type = type; o.frequency.value = freq; g.gain.value = vol;
+        o.connect(g); g.connect(c.destination); o.start();
+        g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + dur);
+        o.stop(c.currentTime + dur);
+      } catch(e) {}
+    }
+
+    // ---------- Procedural image ----------
+    // Build a memorable image: 4 distinct color regions + geometric overlays.
+    function drawImage(ctx, size, seed) {
+      ctx.clearRect(0, 0, size, size);
+      // base gradient
+      const hue = seed * 53 % 360;
+      ctx.fillStyle = `hsl(${hue}, 30%, 18%)`;
+      ctx.fillRect(0,0,size,size);
+
+      const palette = [
+        `hsl(${(hue+0)%360}, 70%, 55%)`,
+        `hsl(${(hue+90)%360}, 70%, 55%)`,
+        `hsl(${(hue+180)%360}, 70%, 55%)`,
+        `hsl(${(hue+270)%360}, 70%, 55%)`,
+      ];
+      // four quadrant base blocks
+      const h = size/2;
+      const order = shuffle([0,1,2,3], seed);
+      ctx.fillStyle = palette[order[0]]; ctx.fillRect(0,0,h,h);
+      ctx.fillStyle = palette[order[1]]; ctx.fillRect(h,0,h,h);
+      ctx.fillStyle = palette[order[2]]; ctx.fillRect(0,h,h,h);
+      ctx.fillStyle = palette[order[3]]; ctx.fillRect(h,h,h,h);
+
+      // overlays
+      // big circle
+      ctx.beginPath();
+      ctx.arc(size*0.5 + (seed%7-3)*8, size*0.5 + ((seed*3)%7-3)*8, size*0.28, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.fill();
+
+      // diagonal stripes
+      ctx.save();
+      ctx.globalAlpha = 0.18;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = Math.max(3, size/40);
+      const off = (seed*13)%20;
+      for (let x = -size; x < size*2; x += size/8) {
+        ctx.beginPath();
+        ctx.moveTo(x+off, 0);
+        ctx.lineTo(x+off + size, size);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // small accent shapes
+      const shapes = 5 + (seed % 4);
+      for (let i=0;i<shapes;i++) {
+        const sx = (seed*97 + i*53) % size;
+        const sy = (seed*131 + i*71) % size;
+        const r = 12 + (i*4) % 14;
+        ctx.fillStyle = `hsla(${(hue+60+i*40)%360}, 80%, 65%, 0.65)`;
+        ctx.beginPath();
+        if (i%3===0) ctx.arc(sx, sy, r, 0, Math.PI*2);
+        else if (i%3===1) ctx.rect(sx, sy, r*2, r*2);
+        else { ctx.moveTo(sx, sy-r); ctx.lineTo(sx+r, sy+r); ctx.lineTo(sx-r, sy+r); ctx.closePath(); }
+        ctx.fill();
+      }
+
+      // big "N" letter to give an orientation cue
+      ctx.fillStyle = 'rgba(255,255,255,0.10)';
+      ctx.font = `bold ${size*0.32}px ui-sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('▲', size/2, size/2);
+    }
+    function shuffle(arr, seed) {
+      const a = arr.slice();
+      for (let i = a.length-1; i > 0; i--) {
+        const j = (seed*(i+13) + i*7) % (i+1);
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    // ---------- Game ----------
+    function levelSpec(lvl) {
+      // grid size + memorize ms
+      if (lvl <= 2) return { n: 3, memMs: 3500 };
+      if (lvl <= 4) return { n: 4, memMs: 4500 };
+      if (lvl <= 6) return { n: 4, memMs: 3500 };
+      return { n: 5, memMs: 4000 };
+    }
+
+    // Tile slot indexes: 0..n*n-1 in row-major
+    // state.slots[i] = tileId at position i. Click two tiles to swap.
+
+    let state = null;
+    function freshState() {
+      return {
+        active: false, level: 1, maxLevel: 1,
+        score: 0, solved: 0, moves: 0,
+        n: 3, slots: [], selectedIdx: -1, seed: 1,
+        boardStart: 0, rts: [],
+        bigCanvas: null, // offscreen image canvas
+        totalTimer: null, totalLeft: TOTAL,
+        memorising: false, memTimer: null,
+      };
+    }
+
+    function newPicture() {
+      // big offscreen canvas (square)
+      const px = 360;
+      const c = document.createElement('canvas'); c.width = px; c.height = px;
+      drawImage(c.getContext('2d'), px, state.seed);
+      state.bigCanvas = c;
+      // preview
+      els.preview.width = 130; els.preview.height = 130;
+      const pctx = els.preview.getContext('2d');
+      pctx.drawImage(c, 0, 0, 130, 130);
+    }
+
+    function newPuzzle() {
+      const { n } = levelSpec(state.level);
+      state.n = n;
+      els.gridChip.textContent = n + '×' + n;
+      state.seed = Math.floor(Math.random()*1e6);
+      newPicture();
+      state.slots = []; for (let i=0;i<n*n;i++) state.slots.push(i);
+      state.selectedIdx = -1;
+      state.moves = 0;
+      // Fisher-Yates shuffle — every arrangement reachable via swaps
+      do {
+        for (let i = state.slots.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i+1));
+          swap(i, j);
+        }
+      } while (isSolved() || correctCount() > Math.max(1, Math.floor(n*n*0.3)));
+      renderBoard();
+    }
+
+    function swap(a, b) {
+      const t = state.slots[a]; state.slots[a] = state.slots[b]; state.slots[b] = t;
+    }
+    function isSolved() {
+      for (let i=0;i<state.slots.length;i++) if (state.slots[i] !== i) return false;
+      return true;
+    }
+    function correctCount() {
+      let c = 0; for (let i=0;i<state.slots.length;i++) if (state.slots[i] === i) c++;
+      return c;
+    }
+
+    // Render
+    function renderBoard() {
+      const n = state.n;
+      const tilePx = Math.floor(Math.min(360, 420) / n);
+      const boardPx = tilePx * n;
+      els.board.style.width = (boardPx + 12) + 'px';
+      els.board.style.height = (boardPx + 12) + 'px';
+      els.boardBg.width = boardPx; els.boardBg.height = boardPx;
+      const bg = els.boardBg.getContext('2d');
+      bg.fillStyle = '#050810'; bg.fillRect(0,0,boardPx,boardPx);
+
+      // wipe existing tile divs
+      [...els.board.querySelectorAll('.tile')].forEach(t => t.remove());
+      const big = state.bigCanvas;
+
+      for (let i=0;i<n*n;i++) {
+        const tileId = state.slots[i];
+        const r = Math.floor(i / n), c = i % n;
+        const div = document.createElement('div');
+        let cls = 'tile';
+        if (i === state.selectedIdx) cls += ' selected';
+        if (tileId === i) cls += ' correct';
+        div.className = cls;
+        div.style.left = (c * tilePx + 6) + 'px';
+        div.style.top  = (r * tilePx + 6) + 'px';
+        div.style.width = tilePx + 'px';
+        div.style.height = tilePx + 'px';
+
+        const cv = document.createElement('canvas');
+        cv.width = tilePx; cv.height = tilePx;
+        const ctx = cv.getContext('2d');
+        const sr = Math.floor(tileId / n), sc = tileId % n;
+        const srcSize = big.width / n;
+        ctx.drawImage(big, sc*srcSize, sr*srcSize, srcSize, srcSize, 0, 0, tilePx, tilePx);
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.fillRect(0, tilePx-18, 22, 18);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 11px ui-sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(String(tileId+1), 11, tilePx-9);
+        div.appendChild(cv);
+
+        div.addEventListener('click', () => onTileClick(i));
+        els.board.appendChild(div);
+      }
+
+      els.moves.textContent = state.moves;
+      els.score.textContent = state.score;
+      els.lvl.textContent = state.level;
+      els.solved.textContent = state.solved;
+    }
+
+    function onTileClick(idx) {
+      if (!state.active || state.memorising) return;
+      if (state.selectedIdx === -1) {
+        state.selectedIdx = idx;
+        beep(440, 0.03, 'sine', 0.03);
+        renderBoard();
+        return;
+      }
+      if (state.selectedIdx === idx) {
+        state.selectedIdx = -1;
+        renderBoard();
+        return;
+      }
+      swap(idx, state.selectedIdx);
+      state.selectedIdx = -1;
+      state.moves++;
+      beep(580, 0.04, 'sine', 0.04);
+      renderBoard();
+      if (isSolved()) onSolved();
+    }
+
+    function onSolved() {
+      const rt = (performance.now() - state.boardStart)/1000;
+      state.rts.push(rt);
+      beep(900, 0.18, 'sine', 0.06);
+      state.solved++;
+      const minMoves = state.n * state.n; // rough lower bound for swap mode
+      const movePenalty = Math.max(0.4, 1 - Math.max(0, state.moves - minMoves) * 0.005);
+      const speedBonus = Math.max(0.4, 1.6 - rt/60);
+      const pts = Math.round(300 * state.level * speedBonus * movePenalty);
+      state.score += pts;
+      els.status.textContent = `Solved in ${rt.toFixed(1)}s, ${state.moves} moves! +${pts}`;
+      els.status.className = 'status ok';
+      state.level = Math.min(8, state.level + 1);
+      state.maxLevel = Math.max(state.maxLevel, state.level);
+      setTimeout(() => { if (state.active) startTrial(); }, 900);
+    }
+
+    // Memorise phase
+    function startTrial() {
+      newPuzzle();
+      state.memorising = true;
+      els.status.textContent = 'Memorise the reference…';
+      els.status.className = 'status';
+      // Show the reference larger temporarily; cover the board.
+      const overlay = document.createElement('div');
+      overlay.className = 'memorise-overlay';
+      overlay.textContent = 'Memorise…';
+      els.board.appendChild(overlay);
+      const ms = levelSpec(state.level).memMs;
+      let t = ms;
+      els.progress.style.width = '100%';
+      clearInterval(state.memTimer);
+      state.memTimer = setInterval(() => {
+        if (!state.active) { clearInterval(state.memTimer); return; }
+        t -= 100; if (t < 0) t = 0;
+        els.progress.style.width = (t/ms*100) + '%';
+        if (t === 0) {
+          clearInterval(state.memTimer);
+          overlay.remove();
+          state.memorising = false;
+          state.boardStart = performance.now();
+          if (els.hideRef.checked) els.previewWrap.style.visibility = 'hidden';
+          else els.previewWrap.style.visibility = 'visible';
+          els.status.textContent = 'Solve it!';
+        }
+      }, 100);
+    }
+
+    function fmtTime(s) { const m=Math.floor(s/60).toString().padStart(2,'0'); const r=(s%60).toString().padStart(2,'0'); return m+':'+r; }
+    function startTotalTimer() {
+      els.totalClock.textContent = fmtTime(state.totalLeft);
+      clearInterval(state.totalTimer);
+      state.totalTimer = setInterval(() => {
+        if (!state.active) { clearInterval(state.totalTimer); return; }
+        state.totalLeft--;
+        els.totalClock.textContent = fmtTime(state.totalLeft);
+        if (state.totalLeft <= 0) endGame();
+      }, 1000);
+    }
+
+    function startGame() {
+      state = freshState();
+      state.active = true;
+      startTotalTimer();
+      startTrial();
+      els.start.textContent = 'Restart';
+    }
+    function endGame() {
+      state.active = false;
+      clearInterval(state.totalTimer);
+      clearInterval(state.memTimer);
+      const sorted = state.rts.slice().sort((a,b)=>a-b);
+      const med = sorted.length ? sorted[Math.floor(sorted.length/2)] : null;
+      const key = 'hvp.best.' + GAME;
+      let prev = null;
+      try { prev = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
+      const newRun = {
+        score: state.score, level: state.maxLevel, solved: state.solved,
+        accuracy: state.solved > 0 ? 1 : 0,
+        rtMedian: med, runs: (prev && prev.runs ? prev.runs : 0) + 1, at: Date.now()
+      };
+      let isPb = false;
+      if (!prev || newRun.score > (prev.score || 0)) { isPb = true; localStorage.setItem(key, JSON.stringify(newRun)); }
+      else { prev.runs = newRun.runs; localStorage.setItem(key, JSON.stringify(prev)); }
+
+      const sz = levelSpec(state.maxLevel).n;
+      els.mScore.textContent = state.score.toLocaleString();
+      els.mLevel.textContent = sz + '×' + sz;
+      els.mSolved.textContent = state.solved;
+      els.mRt.textContent = med == null ? '—' : med.toFixed(1) + 's';
+      els.pbFlag.style.display = isPb ? 'inline-block' : 'none';
+      els.modalBack.classList.add('show');
+    }
+
+    // Bindings
+    els.start.addEventListener('click', startGame);
+    els.reset.addEventListener('click', () => {
+      if (state) { state.active = false; clearInterval(state.totalTimer); clearInterval(state.memTimer); }
+      state = freshState();
+      [...els.board.querySelectorAll('.tile')].forEach(t => t.remove());
+      els.boardBg.getContext('2d').clearRect(0,0,els.boardBg.width,els.boardBg.height);
+      els.preview.getContext('2d').clearRect(0,0,els.preview.width,els.preview.height);
+      els.lvl.textContent='1'; els.score.textContent='0'; els.moves.textContent='0'; els.solved.textContent='0';
+      els.gridChip.textContent='3×3'; els.status.textContent = '';
+      els.totalClock.textContent = fmtTime(TOTAL); els.progress.style.width = '100%';
+      els.start.textContent = 'Start Game';
+    });
+    els.mAgain.addEventListener('click', () => { els.modalBack.classList.remove('show'); startGame(); });
+
+    state = freshState();
+    els.totalClock.textContent = fmtTime(TOTAL);
+  })();
+  </script>
+</body>
+</html>

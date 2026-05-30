@@ -1,1 +1,57 @@
+# OS / Filesystem
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.history/
+
+# Node / tooling (in case anyone adds it later)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+.cache/
+
+# Secrets / env / user-specific
+.env
+.env.*
+*.local
+*.pem
+*.key
+*.crt
+.netrc
+.npmrc
+.yarnrc
+.envrc
+.direnv/
+secrets/
+private/
+
+# Build / logs / scratch
+dist/
+build/
+out/
+coverage/
+*.log
+logs/
+tmp/
+.tmp/
+
+# Claude / agent scratch
+.claude/
+CLAUDE.local.md

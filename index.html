@@ -3,27 +3,1756 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HireVue Practice</title>
+  <title>HireVue Practice — All Games (Single File)</title>
   <style>
-    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background: #0e1117; color: #e6edf3; text-align: center; margin: 0; }
-    .container { max-width: 760px; margin: 40px auto; background: #161b22; padding: 24px; border-radius: 16px; }
-    a { color: #9cc1ff; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    ul { list-style: none; padding: 0; }
-    li { background:#1f2937; border:2px solid #2b3547; border-radius:12px; padding:14px; margin:12px 0; }
+    :root {
+      --bg:#0b0f17; --panel:#131a24; --panel-2:#1a2330; --border:#233146;
+      --text:#e6edf3; --muted:#8b97a8; --accent:#2f81f7; --accent-2:#5dd5c4;
+      --ok:#22c55e; --warn:#eab308; --bad:#ef4444;
+    }
+    *{box-sizing:border-box}html,body{margin:0;padding:0}
+    body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:radial-gradient(ellipse at top,rgba(47,129,247,.15),transparent 60%),radial-gradient(ellipse at bottom,rgba(93,213,196,.1),transparent 60%),var(--bg);color:var(--text);min-height:100vh}
+    .wrap{max-width:1100px;margin:0 auto;padding:48px 20px 64px}
+    .panel{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:24px;max-width:760px;margin:0 auto}
+    h1{margin:0 0 4px;font-size:22px;letter-spacing:-.3px}
+    h1.hub{font-size:36px;text-align:center}
+    h1.hub .accent{background:linear-gradient(90deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+    .subtitle{color:var(--muted);font-size:13px;margin-bottom:16px}
+    .tag{color:var(--muted);font-size:15px;max-width:720px;margin:6px auto 0;text-align:center}
+    .topbar{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+    .progress-wrap{flex:1;height:10px;background:#0a1018;border:1px solid var(--border);border-radius:999px;overflow:hidden}
+    .progress-bar{height:100%;width:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .1s linear}
+    .clock{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px;min-width:50px;text-align:right}
+    .switch{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}.switch input{accent-color:var(--accent)}
+    .meta-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap}
+    .chip{display:inline-block;background:var(--panel-2);border:1px solid var(--border);border-radius:999px;padding:5px 10px;font-size:12px;color:var(--text)}.chip b{color:var(--accent-2);font-weight:600}
+    .status{margin-top:12px;min-height:22px;font-size:14px;text-align:center}.ok{color:var(--ok)}.fail{color:var(--bad)}
+    button{background:var(--panel-2);color:var(--text);border:1px solid var(--border);padding:10px 16px;border-radius:10px;cursor:pointer;font-size:14px;font-family:inherit}
+    button.primary{background:linear-gradient(180deg,var(--accent),#1c66cf);border-color:transparent}
+    button:hover{filter:brightness(1.1)}button:disabled{opacity:.45;cursor:not-allowed}
+    .actions{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+    .helper{color:var(--muted);font-size:12px;margin-top:6px;text-align:center}
+    .back-btn{position:fixed;top:14px;left:14px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:999px;text-decoration:none;z-index:10;cursor:pointer}
+    .back-btn:hover{background:var(--panel-2)}
+    .modal-back{position:fixed;inset:0;background:rgba(2,6,12,.7);display:none;align-items:center;justify-content:center;z-index:20;backdrop-filter:blur(6px)}
+    .modal-back.show{display:flex}
+    .modal{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:460px;width:90%}
+    .modal h2{margin:0 0 6px;font-size:22px}
+    .modal .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--border);font-size:14px}.modal .row:last-child{border-bottom:0}.modal .row b{color:var(--accent-2)}
+    .pb-flag{display:inline-block;background:rgba(34,197,94,.15);color:var(--ok);padding:4px 8px;border-radius:999px;font-size:12px;margin-top:10px}
+
+    /* Hub */
+    .stats-bar{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:22px}
+    .stat{background:var(--panel);border:1px solid var(--border);border-radius:999px;padding:8px 14px;font-size:13px;color:var(--muted)}.stat b{color:var(--text);margin-right:6px}
+    .section-title{font-size:13px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin:28px 0 12px;padding-left:4px}
+    .grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+    .card{display:block;text-decoration:none;color:var(--text);background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;position:relative;overflow:hidden;cursor:pointer;transition:transform .15s,border-color .15s,background .15s}
+    .card:hover{transform:translateY(-2px);border-color:var(--accent);background:var(--panel-2)}
+    .card .title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+    .card .title{font-size:18px;font-weight:600}
+    .card .badge{font-size:11px;padding:3px 8px;border-radius:999px;background:rgba(47,129,247,.15);color:var(--accent);border:1px solid rgba(47,129,247,.35);text-transform:uppercase;letter-spacing:1px}
+    .card .desc{font-size:13px;color:var(--muted);line-height:1.4;margin:4px 0 12px;min-height:36px}
+    .card .best{font-size:12px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}.card .best b{color:var(--text)}
+    footer{margin-top:36px;text-align:center;color:var(--muted);font-size:12px}
+    footer a{color:var(--muted)}
+    .reset{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:5px 10px;font-size:11px;cursor:pointer;margin-left:8px}.reset:hover{color:var(--bad);border-color:var(--bad)}
+
+    /* Numerosity hex */
+    .num-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:4px}
+    .hex-wrap{position:relative;aspect-ratio:1/1;cursor:pointer;transition:transform .12s}.hex-wrap:hover{transform:translateY(-2px)}
+    .hex{position:absolute;inset:0;clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);background:linear-gradient(180deg,#243042,#1a2230);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:600;color:var(--text);user-select:none}
+    .hex-wrap.selected .hex{background:linear-gradient(180deg,var(--accent),#1b58c0);color:#fff;box-shadow:0 6px 18px rgba(47,129,247,.35)}
+    .hex-wrap.wrong .hex{background:linear-gradient(180deg,var(--bad),#8a1f1f);color:#fff}
+    .hex-wrap.right .hex{background:linear-gradient(180deg,var(--ok),#137a36);color:#fff}
+    .target-card{text-align:center;padding:22px 16px 18px;background:linear-gradient(180deg,rgba(47,129,247,.1),transparent);border:1px solid var(--border);border-radius:14px;margin-bottom:18px}
+    .target-card .label{color:var(--muted);font-size:12px;letter-spacing:2px;text-transform:uppercase}
+    .target-card .op{font-size:24px;color:var(--accent);margin:4px 4px 0}
+    .target-card .target{font-size:52px;font-weight:700;letter-spacing:-1px}
+    .target-card .hint{color:var(--muted);font-size:12px;margin-top:4px}
+
+    /* DigitSpan */
+    .ds-display{text-align:center;padding:28px 16px;background:linear-gradient(180deg,rgba(47,129,247,.1),transparent);border:1px solid var(--border);border-radius:14px;margin:8px 0 14px;min-height:92px;display:flex;align-items:center;justify-content:center;font-size:46px;font-weight:700;letter-spacing:8px;font-variant-numeric:tabular-nums}
+    .ds-display.empty{color:var(--muted);letter-spacing:4px;font-size:14px;font-weight:400}
+    .ds-display.dim{color:var(--muted)}
+    .ds-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+    .ds-key{background:var(--panel-2);border:1px solid var(--border);border-radius:12px;padding:14px;font-size:20px;cursor:pointer;user-select:none;text-align:center;transition:background .1s}
+    .ds-key:active,.ds-key.pressed{background:var(--accent);color:#fff}
+    .ds-key.special{background:#1a2230;color:var(--muted)}.ds-key.disabled{opacity:.45;pointer-events:none}
+    .modeline{display:flex;gap:8px;justify-content:center;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+    .toggle{display:inline-flex;background:var(--panel-2);border:1px solid var(--border);border-radius:999px;padding:3px}
+    .toggle .opt{padding:5px 10px;font-size:12px;color:var(--muted);cursor:pointer;border-radius:999px}.toggle .opt.active{background:var(--accent);color:#fff}
+
+    /* Flashback */
+    .fb-rule{text-align:center;margin:6px 0 12px;font-size:14px;color:var(--muted)}.fb-rule b{color:var(--accent)}
+    .fb-stage{display:flex;justify-content:center;align-items:center;min-height:240px;background:linear-gradient(180deg,rgba(47,129,247,.08),transparent);border:1px solid var(--border);border-radius:14px;padding:22px}
+    .fb-stage canvas{width:200px;height:200px}
+    .fb-answers{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+    .btn-big{padding:16px;font-size:18px;border-radius:12px;cursor:pointer;border:1px solid var(--border);color:var(--text);font-family:inherit}
+    .btn-match{background:linear-gradient(180deg,#16793b,#0f5128);border-color:transparent}
+    .btn-nomatch{background:linear-gradient(180deg,#8a2222,#5b1414);border-color:transparent}
+    .btn-big.flash{outline:3px solid var(--accent-2)}
+    .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--panel-2);border:1px solid var(--border);padding:1px 6px;border-radius:4px;font-size:11px}
+
+    /* Pathfinder */
+    .pf-board{display:grid;gap:6px;margin:0 auto;background:#0a1018;padding:10px;border-radius:14px;border:1px solid var(--border);width:fit-content}
+    .pf-cell{background:linear-gradient(180deg,#182234,#121a28);border-radius:8px;cursor:pointer;position:relative;width:72px;height:72px;display:flex;align-items:center;justify-content:center;transition:transform .12s,outline .1s}
+    .pf-cell.fixed{cursor:default;background:linear-gradient(180deg,#1c2a3f,#131c2c)}
+    .pf-cell.selected{outline:3px solid var(--accent)}
+    .pf-cell.connected{background:linear-gradient(180deg,#163525,#0e2118)}
+    .pf-cell svg{width:100%;height:100%;display:block}
+    .pf-badge{position:absolute;top:4px;left:6px;font-size:10px;color:var(--muted)}
+
+    /* Puzzle */
+    .pz-stage{display:flex;gap:14px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+    .pz-preview{background:#0a1018;border:1px solid var(--border);border-radius:12px;padding:8px}
+    .pz-preview .label{font-size:11px;color:var(--muted);text-align:center;margin-bottom:4px}
+    .pz-preview canvas{width:130px;height:130px;display:block;border-radius:6px}
+    .pz-board{background:#0a1018;border:1px solid var(--border);border-radius:12px;padding:6px;position:relative}
+    .pz-tile{position:absolute;cursor:pointer;transition:transform .15s;border-radius:4px;overflow:hidden;outline:1px solid rgba(0,0,0,.4)}
+    .pz-tile.empty{background:#050810;cursor:default}.pz-tile canvas{display:block;pointer-events:none}
+    .pz-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(11,15,23,.7);border-radius:10px;font-size:18px}
+
+    /* Shapedance */
+    .sd-target-area{display:flex;gap:12px;align-items:center;justify-content:center;margin-bottom:12px}
+    .sd-target-tile{background:#101826;border:2px dashed #314161;border-radius:12px;padding:6px}
+    .sd-target-tile canvas{display:block;width:140px;height:140px}
+    .sd-target-label{font-size:12px;color:var(--muted);text-align:center;margin-bottom:4px}
+    .sd-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+    .sd-tile{background:#1f2937;border:2px solid #2b3547;border-radius:12px;padding:8px;cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:center}
+    .sd-tile.selected{border-color:var(--accent);background:#243b66}
+    .sd-tile canvas{width:120px;height:120px}
+    .sd-rot{display:inline-block}
+    .sd-spin{animation:sd-spin 10s linear infinite}
+    @keyframes sd-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+    /* Singularity */
+    .sn-field{background:#0a1018;border:1px solid var(--border);border-radius:14px;padding:12px;display:grid;gap:8px;margin:0 auto;width:fit-content}
+    .sn-cell{display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:8px;transition:background .1s}
+    .sn-cell:hover{background:rgba(47,129,247,.1)}
+    .sn-cell.right{background:rgba(34,197,94,.25)}.sn-cell.wrong{background:rgba(239,68,68,.25)}
+    .sn-cell svg{display:block}
+    .sn-cell.spin svg{animation:sn-spin 6s linear infinite}
+    .sn-cell.drift svg{animation:sn-drift 3s ease-in-out infinite alternate}
+    @keyframes sn-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+    @keyframes sn-drift{from{transform:translateX(-4px) rotate(-3deg)}to{transform:translateX(4px) rotate(3deg)}}
+
+    @media (max-width:480px){.target-card .target{font-size:44px}.hex{font-size:24px}}
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>HireVue Practice</h2>
-    <p>Select a game to begin:</p>
-    <ul>
-      <li><a href="digitspan">Digitspan</a></li>
-      <li><a href="numerosity">Numerosity</a></li>
-      <li><a href="shapedance">Shapedance</a></li>
-    </ul>
+  <a class="back-btn" id="backBtn" style="display:none">←</a>
+  <div class="wrap" id="root"></div>
+
+  <div class="modal-back" id="modalBack">
+    <div class="modal">
+      <h2 id="mTitle">Session complete</h2>
+      <div class="subtitle">Here's how you did this run.</div>
+      <div id="mRows"></div>
+      <div id="mPb" class="pb-flag" style="display:none">New personal best!</div>
+      <div class="actions">
+        <button class="primary" id="mAgain">Play again</button>
+        <button id="mHub">Back to hub</button>
+      </div>
+    </div>
   </div>
+
+<script>
+/* ============================================================
+   HireVue Practice — single-file SPA
+   Routes via location.hash: #hub | #numerosity | #digitspan | #flashback
+                              #pathfinder | #puzzle | #shapedance | #singularity
+============================================================ */
+(() => {
+'use strict';
+
+// ---------- Shared infra ----------
+const $ = id => document.getElementById(id);
+const root = $('root');
+const backBtn = $('backBtn');
+const modalBack = $('modalBack');
+const mTitle = $('mTitle');
+const mRows = $('mRows');
+const mPb = $('mPb');
+const mAgain = $('mAgain');
+const mHub = $('mHub');
+
+const TOTAL = 180;
+let SOUND = true;
+let audioCtx = null;
+function beep(freq=440, dur=0.08, type='sine', vol=0.05) {
+  if (!SOUND) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+    o.type = type; o.frequency.value = freq; g.gain.value = vol;
+    o.connect(g); g.connect(audioCtx.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+    o.stop(audioCtx.currentTime + dur);
+  } catch(e) {}
+}
+function fmtTime(s){const m=Math.floor(s/60).toString().padStart(2,'0');const r=(s%60).toString().padStart(2,'0');return m+':'+r;}
+function R(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function pick(a){return a[R(0,a.length-1)];}
+
+const BEST_KEY = g => 'hvp.best.' + g;
+function loadBest(g){try{return JSON.parse(localStorage.getItem(BEST_KEY(g))||'null');}catch{return null;}}
+function saveRun(g, run) {
+  const prev = loadBest(g);
+  run.runs = (prev && prev.runs ? prev.runs : 0) + 1;
+  let isPb = !prev || (run.score || 0) > (prev.score || 0);
+  if (isPb) localStorage.setItem(BEST_KEY(g), JSON.stringify({ ...run, at: Date.now() }));
+  else { prev.runs = run.runs; localStorage.setItem(BEST_KEY(g), JSON.stringify(prev)); }
+  return isPb;
+}
+
+function showModal(title, rows, isPb) {
+  mTitle.textContent = title;
+  mRows.innerHTML = '';
+  rows.forEach(([l, v]) => {
+    const d = document.createElement('div'); d.className = 'row';
+    d.innerHTML = `<span>${l}</span><b>${v}</b>`;
+    mRows.appendChild(d);
+  });
+  mPb.style.display = isPb ? 'inline-block' : 'none';
+  modalBack.classList.add('show');
+}
+
+// ---------- Router ----------
+const GAMES_META = [
+  { id:'numerosity', title:'Numerosity', section:'Cognitive · Numerical & Memory', badge:'Medium',
+    desc:'Pick hex tiles whose result equals the target. + − × ÷, 2 → 3 picks.' },
+  { id:'digitspan', title:'DigitSpan', section:'Cognitive · Numerical & Memory', badge:'Medium',
+    desc:'Recall a sequence forward or reverse. Multiple reveal modes, digits & letters.' },
+  { id:'flashback', title:'Flashback', section:'Cognitive · Numerical & Memory', badge:'Hard',
+    desc:'N-back match decisions. 1-back → 4-back as you streak.' },
+  { id:'pathfinder', title:'Pathfinder', section:'Spatial · Visual processing', badge:'Medium',
+    desc:'Swap road tiles to connect Start to End. Strict path validation.' },
+  { id:'puzzle', title:'Puzzle', section:'Spatial · Visual processing', badge:'Medium',
+    desc:'Memorize an image, then slide tiles to rebuild it. 3×3 → 5×5.' },
+  { id:'shapedance', title:'Shapedance', section:'Spatial · Visual processing', badge:'Hard',
+    desc:'Find all tiles matching the target pattern, rotation-invariant.' },
+  { id:'singularity', title:'Singularity', section:'Spatial · Visual processing', badge:'Medium',
+    desc:'Spot the one unique shape. Rotation alone never counts as unique.' },
+];
+const GAME_IDS = GAMES_META.map(g => g.id);
+
+let currentTeardown = null;
+function unload() {
+  if (currentTeardown) { try { currentTeardown(); } catch(e){} currentTeardown = null; }
+  modalBack.classList.remove('show');
+  root.innerHTML = '';
+}
+function route() {
+  unload();
+  const h = (location.hash || '#hub').replace('#','');
+  if (h === 'hub' || !GAME_IDS.includes(h)) { backBtn.style.display = 'none'; renderHub(); return; }
+  backBtn.style.display = 'flex';
+  renderGame(h);
+}
+window.addEventListener('hashchange', route);
+backBtn.addEventListener('click', () => { location.hash = '#hub'; });
+mHub.addEventListener('click', () => { modalBack.classList.remove('show'); location.hash = '#hub'; });
+mAgain.addEventListener('click', () => {
+  modalBack.classList.remove('show');
+  const id = (location.hash || '#hub').replace('#','');
+  if (GAME_IDS.includes(id)) renderGame(id);
+});
+
+// ---------- Hub ----------
+function renderHub() {
+  const sections = {};
+  GAMES_META.forEach(g => { (sections[g.section] = sections[g.section] || []).push(g); });
+
+  let html = `
+    <header style="text-align:center;margin-bottom:20px">
+      <h1 class="hub">HireVue <span class="accent">Practice</span></h1>
+      <p class="tag">Adaptive recreations of the seven cognitive & spatial HireVue games. All run in one page — no reloads between games.</p>
+      <div class="stats-bar" id="statsBar"></div>
+    </header>
+  `;
+  for (const sec of Object.keys(sections)) {
+    html += `<div class="section-title">${sec}</div><div class="grid-cards">`;
+    for (const g of sections[sec]) {
+      const b = loadBest(g.id);
+      const bestParts = b ? [
+        b.score != null ? `<span><b>${b.score.toLocaleString()}</b> best</span>` : '',
+        b.level != null ? `<span>L<b>${b.level}</b></span>` : '',
+        b.accuracy != null ? `<span><b>${Math.round(b.accuracy*100)}%</b></span>` : '',
+      ].filter(Boolean).join('') : '<span style="opacity:.6">No score yet</span>';
+      html += `
+        <div class="card" data-go="${g.id}">
+          <div class="title-row"><div class="title">${g.title}</div><div class="badge">${g.badge}</div></div>
+          <div class="desc">${g.desc}</div>
+          <div class="best">${bestParts}</div>
+        </div>`;
+    }
+    html += `</div>`;
+  }
+  html += `
+    <footer>
+      Personal bests are stored locally on this device.
+      <button class="reset" id="resetAll">Reset all stats</button>
+      <div style="margin-top:8px">Practice all seven · ~3 min per game · Standalone copies in <code>/src/&lt;game&gt;/</code></div>
+    </footer>
+  `;
+  root.innerHTML = html;
+
+  // Stats bar
+  let total = 0, played = 0, runs = 0;
+  GAME_IDS.forEach(id => { const b = loadBest(id); if (b) { played++; if (typeof b.score==='number') total += b.score; runs += b.runs||0; } });
+  $('statsBar').innerHTML = `
+    <div class="stat"><b>${played}/${GAME_IDS.length}</b> games played</div>
+    <div class="stat"><b>${total.toLocaleString()}</b> total best score</div>
+    <div class="stat"><b>${runs}</b> total runs</div>
+  `;
+
+  document.querySelectorAll('[data-go]').forEach(c => c.addEventListener('click', () => { location.hash = '#' + c.dataset.go; }));
+  $('resetAll').addEventListener('click', () => {
+    if (!confirm('Clear all locally saved scores and stats?')) return;
+    GAME_IDS.forEach(g => localStorage.removeItem(BEST_KEY(g)));
+    renderHub();
+  });
+}
+
+// ---------- Shared game scaffold ----------
+function gameShell({ id, title, subtitle, extraTop = '', mainHtml, helper }) {
+  root.innerHTML = `
+    <div class="panel">
+      <h1>${title}</h1>
+      <div class="subtitle">${subtitle}</div>
+      <div class="topbar">
+        <div class="progress-wrap"><div id="progress" class="progress-bar"></div></div>
+        <div class="clock" id="totalClock">03:00</div>
+        <label class="switch"><input type="checkbox" id="sound" ${SOUND?'checked':''}> Sound</label>
+      </div>
+      ${extraTop}
+      ${mainHtml}
+      <div class="status" id="status"></div>
+      <div class="actions" id="actions"></div>
+      ${helper ? `<div class="helper">${helper}</div>` : ''}
+    </div>
+  `;
+  $('sound').addEventListener('change', e => { SOUND = e.target.checked; });
+  return {
+    progress: $('progress'),
+    totalClock: $('totalClock'),
+    status: $('status'),
+    actions: $('actions'),
+  };
+}
+
+// Per-game total-timer helper
+function makeTotalTimer(host, isActive, onDone) {
+  let left = TOTAL;
+  host.totalClock.textContent = fmtTime(left);
+  const t = setInterval(() => {
+    if (!isActive()) { clearInterval(t); return; }
+    left--;
+    host.totalClock.textContent = fmtTime(left);
+    if (left <= 0) { clearInterval(t); onDone(); }
+  }, 1000);
+  return () => clearInterval(t);
+}
+
+// ============================================================
+// Game dispatch
+// ============================================================
+function renderGame(id) {
+  if (id === 'numerosity') return gameNumerosity();
+  if (id === 'digitspan')  return gameDigitspan();
+  if (id === 'flashback')  return gameFlashback();
+  if (id === 'pathfinder') return gamePathfinder();
+  if (id === 'puzzle')     return gamePuzzle();
+  if (id === 'shapedance') return gameShapedance();
+  if (id === 'singularity')return gameSingularity();
+}
+
+// ============================================================
+// 1. NUMEROSITY
+// ============================================================
+function gameNumerosity() {
+  const host = gameShell({
+    id:'numerosity', title:'Numerosity',
+    subtitle:'Pick hex tiles whose result matches the target.',
+    extraTop:`
+      <div class="meta-row">
+        <div>
+          <span class="chip">Level <b id="lvl">1</b></span>
+          <span class="chip">Score <b id="score">0</b></span>
+          <span class="chip">Streak <b id="streak">0</b></span>
+        </div>
+        <div><span class="chip">Pick <b id="picksNeed">2</b></span></div>
+      </div>
+      <div class="target-card">
+        <div class="label">Target</div>
+        <div><span class="op" id="op">+</span><span class="target" id="target">—</span></div>
+        <div class="hint" id="hint">Press Start</div>
+      </div>
+    `,
+    mainHtml:`<div class="num-grid" id="grid"></div>`,
+    helper:'Goal: complete the equation. ÷ rounds always have integer answers.',
+  });
+  host.actions.innerHTML = `<button id="start" class="primary">Start Game</button><button id="reset">Reset</button>`;
+  const grid = $('grid'); const elOp = $('op'); const elT = $('target'); const elH = $('hint');
+  const elL = $('lvl'); const elS = $('score'); const elSt = $('streak'); const elPN = $('picksNeed');
+
+  let state = fresh();
+  function fresh(){return{level:1,score:0,streak:0,bestStreak:0,correct:0,attempted:0,rts:[],active:false,round:null,selected:[],roundStart:0,qTimer:null,maxLevel:1};}
+  function spec(l){
+    // Aggressive ramp: 2-pick basics by L3, 3-pick by L7, mixed-op by L10,
+    // bigger numbers L12+, 4-pick L18+.
+    if(l<=1) return{op:'add',count:2,range:[2,12]};
+    if(l<=2) return{op:'sub',count:2,range:[3,20]};
+    if(l<=3) return{op:'mul',count:2,range:[2,9]};
+    if(l<=4) return{op:'div',count:2,range:[2,12]};
+    if(l<=6) return{op:'add',count:3,range:[3,20]};
+    if(l<=8) return{op:'sub',count:3,range:[4,30]};
+    if(l<=10)return{op:'mul',count:2,range:[3,15]};
+    if(l<=12)return{op:'mix2',count:2,range:[5,30]};   // any single op, bigger nums
+    if(l<=14)return{op:'mul',count:3,range:[2,10]};
+    if(l<=16)return{op:'mix3',count:3,range:[5,25]};   // any op, 3-pick, bigger
+    if(l<=18)return{op:'add',count:4,range:[4,30]};    // 4-pick begins
+    if(l<=20)return{op:'sub',count:4,range:[5,40]};
+    if(l<=22)return{op:'mix2',count:2,range:[10,60]};  // huge two-number ops
+    if(l<=24)return{op:'mix3',count:3,range:[8,40]};
+    return     {op:'mul',count:4,range:[2,9]};         // 4-pick mul brutal
+  }
+  const sym = o => ({add:'+',sub:'−',mul:'×',div:'÷'})[o];
+  const opPool = ['add','sub','mul','div'];
+
+  function build(l){
+    const s = spec(l);
+    let op = s.op; if (op==='mix2'||op==='mix3') op = pick(opPool);
+    const count = s.count; const [lo, hi] = s.range;
+    let solution = []; let target = 0;
+    if (op==='add') { for(let i=0;i<count;i++) solution.push(R(lo,hi)); target = solution.reduce((a,b)=>a+b,0); }
+    else if (op==='sub') { for(let i=0;i<count;i++) solution.push(R(lo,hi)); target = solution[0]; for(let i=1;i<count;i++) target -= solution[i]; }
+    else if (op==='mul') { for(let i=0;i<count;i++) solution.push(R(lo,hi)); target = solution.reduce((a,b)=>a*b,1); }
+    else { const d=R(2,Math.min(12,hi)), q=R(2,Math.min(12,hi)); solution=[d*q, d]; target=q; }
+    const tiles = solution.slice();
+    // For count>2 rounds, distractors must not allow a smaller subset to also
+    // hit the target — otherwise the player can shortcut the puzzle.
+    function evalSub(o, ps) {
+      if (o==='add') return ps.reduce((a,b)=>a+b,0)===target;
+      if (o==='mul') return ps.reduce((a,b)=>a*b,1)===target;
+      if (o==='sub') { const n=ps.length;
+        for (let m=0;m<(1<<n);m++){let v=0;for(let i=0;i<n;i++)v+=((m>>i)&1)?-ps[i]:ps[i]; if(v===target) return true;} return false;
+      }
+      return false;
+    }
+    function combos(arr, k, cb) {
+      (function rec(s, cur){ if (cur.length===k){cb(cur);return;}
+        for (let i=s;i<arr.length;i++){cur.push(arr[i]); rec(i+1, cur); cur.pop();} })(0,[]);
+    }
+    function cheat(c) {
+      if (count <= 2) return false;
+      const t = [...tiles, c]; let found = false;
+      for (let k=2; k<count; k++) { combos(t, k, ps => { if (!found && evalSub(op, ps)) found = true; }); if (found) return true; }
+      return false;
+    }
+    // tile count: 6 for 2/3-pick, 7 for 4-pick, so 1–3 distractors always exist
+    const tileCount = count >= 4 ? 7 : 6;
+    let g=0; while(tiles.length<tileCount && g<400){g++;const c=R(lo,hi);if(!cheat(c)) tiles.push(c);}
+    while (tiles.length<tileCount) tiles.push(R(lo,hi));
+    for (let i=tiles.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[tiles[i],tiles[j]]=[tiles[j],tiles[i]];}
+    return { op, count, target, tiles, solution, lvl:l };
+  }
+  function evaluate(op, picks, target) {
+    if (op==='add') return picks.reduce((a,b)=>a+b,0)===target;
+    if (op==='mul') return picks.reduce((a,b)=>a*b,1)===target;
+    if (op==='sub') {
+      const n=picks.length;
+      for (let m=0;m<(1<<n);m++) {
+        let v=0; for (let i=0;i<n;i++) v += ((m>>i)&1) ? -picks[i] : picks[i];
+        if (v===target) return true;
+      } return false;
+    }
+    if (op==='div') {
+      if (picks.length!==2) return false;
+      const [a,b]=picks; return (b!==0&&a/b===target)||(a!==0&&b/a===target);
+    }
+    return false;
+  }
+  function render() {
+    grid.innerHTML='';
+    const r = state.round;
+    elOp.textContent = sym(r.op); elT.textContent = r.target; elPN.textContent = r.count;
+    elH.textContent = r.count===2 ? 'Pick 2 tiles' : 'Pick up to 3 tiles';
+    elL.textContent = r.lvl; elS.textContent = state.score; elSt.textContent = state.streak;
+    r.tiles.forEach((n,i)=>{
+      const w = document.createElement('div'); w.className='hex-wrap';
+      w.innerHTML = `<div class="hex"><span>${n}</span></div>`;
+      w.addEventListener('click',()=>onPick(i));
+      grid.appendChild(w);
+    });
+    state.selected = []; state.roundStart = performance.now();
+    startQTimer();
+  }
+  function onPick(i) {
+    if (!state.active) return;
+    const w = grid.children[i];
+    if (w.classList.contains('selected')) { w.classList.remove('selected'); state.selected = state.selected.filter(x=>x!==i); return; }
+    if (state.selected.length >= state.round.count) return;
+    w.classList.add('selected'); state.selected.push(i);
+    beep(700+state.selected.length*60,.05,'triangle',.04);
+    check();
+  }
+  function check() {
+    const r = state.round; const sel = state.selected;
+    if (sel.length<2) return;
+    const picks = sel.map(i=>+grid.children[i].querySelector('span').textContent);
+    // 2-pick rounds: finalize on 2 picks (right or wrong)
+    if (r.count===2) return finalize(evaluate(r.op, picks, r.target), picks);
+    // Multiplication with count > 2: only meaningful at the full count
+    if (r.op==='mul') { if (sel.length === r.count) finalize(evaluate(r.op, picks, r.target), picks); return; }
+    // Add/Sub/Div with count > 2: any subset hitting target wins; wait until full count if wrong
+    const ok = evaluate(r.op, picks, r.target);
+    if (ok) return finalize(true, picks);
+    if (sel.length === r.count) finalize(false, picks);
+  }
+  function finalize(ok, picks) {
+    clearInterval(state.qTimer);
+    const rt = (performance.now()-state.roundStart)/1000;
+    state.attempted++; if (ok) state.correct++;
+    state.rts.push(rt);
+    state.selected.forEach(i => { const w=grid.children[i]; w.classList.remove('selected'); w.classList.add(ok?'right':'wrong'); });
+    if (ok) {
+      beep(880,.12); state.streak++; state.bestStreak = Math.max(state.bestStreak, state.streak);
+      const sb = Math.max(.4, 1.5 - rt/12);
+      const sm = 1 + Math.min(state.streak,9)*.05;
+      const pts = Math.round(100 * state.round.lvl * sb * sm);
+      state.score += pts;
+      host.status.textContent = `Correct! +${pts}`; host.status.className='status ok';
+      // Early game: bump every correct. Mid+: need streak of 2.
+      const advance = state.round.lvl < 6 || state.streak >= 2;
+      setTimeout(()=>{ if (!state.active) return; if (advance) state.level = Math.min(28, state.level + 1); state.maxLevel=Math.max(state.maxLevel,state.level); state.round=build(state.level); render(); }, 700);
+    } else {
+      beep(180,.18,'square'); state.streak = 0;
+      host.status.textContent = `Wrong — solution was ${state.round.solution.join(' '+sym(state.round.op)+' ')}`;
+      host.status.className='status fail';
+      setTimeout(()=>{ if (!state.active) return; state.level=Math.max(1,state.level-1); state.round=build(state.level); render(); }, 1100);
+    }
+  }
+  function startQTimer() {
+    const budget = Math.max(12, 28 - state.round.lvl*.7);
+    let t = budget;
+    host.progress.style.width = '100%';
+    clearInterval(state.qTimer);
+    state.qTimer = setInterval(()=>{
+      if (!state.active) { clearInterval(state.qTimer); return; }
+      t -= .1; if (t<0) t=0; host.progress.style.width = (t/budget*100)+'%';
+      if (t===0) { clearInterval(state.qTimer); finalize(false, []); }
+    }, 100);
+  }
+  let stopTotal = null;
+  function startGame() {
+    state = fresh(); state.active = true;
+    state.round = build(1); render();
+    stopTotal = makeTotalTimer(host, ()=>state.active, endGame);
+    $('start').textContent = 'Restart';
+  }
+  function endGame() {
+    state.active = false; clearInterval(state.qTimer); if (stopTotal) stopTotal();
+    const acc = state.attempted ? state.correct/state.attempted : 0;
+    const sorted = state.rts.slice().sort((a,b)=>a-b);
+    const med = sorted.length ? sorted[Math.floor(sorted.length/2)] : null;
+    const isPb = saveRun('numerosity', { score: state.score, level: state.maxLevel, accuracy: acc, correct: state.correct, attempted: state.attempted, rtMedian: med });
+    showModal('Numerosity — session complete', [
+      ['Final score', state.score.toLocaleString()],
+      ['Max level reached', state.maxLevel],
+      ['Accuracy', Math.round(acc*100)+'%'],
+      ['Correct / Attempted', `${state.correct} / ${state.attempted}`],
+      ['Median response time', med==null?'—':med.toFixed(2)+'s'],
+    ], isPb);
+  }
+  $('start').addEventListener('click', startGame);
+  $('reset').addEventListener('click', ()=>{ state.active=false; clearInterval(state.qTimer); if (stopTotal) stopTotal(); state = fresh();
+    grid.innerHTML=''; host.status.textContent=''; elL.textContent='1'; elS.textContent='0'; elSt.textContent='0';
+    host.totalClock.textContent=fmtTime(TOTAL); host.progress.style.width='100%'; elOp.textContent='+'; elT.textContent='—';
+    $('start').textContent='Start Game'; });
+  currentTeardown = () => { state.active=false; clearInterval(state.qTimer); if (stopTotal) stopTotal(); };
+}
+
+// ============================================================
+// 2. DIGITSPAN
+// ============================================================
+function gameDigitspan() {
+  const host = gameShell({
+    id:'digitspan', title:'DigitSpan',
+    subtitle:'Memorize the sequence, then type it back.',
+    extraTop:`
+      <div class="modeline">
+        <span class="chip">Direction:</span>
+        <div class="toggle" id="dirToggle">
+          <div class="opt active" data-val="forward">Forward</div>
+          <div class="opt" data-val="reverse">Reverse</div>
+        </div>
+        <span class="chip">Charset:</span>
+        <div class="toggle" id="setToggle">
+          <div class="opt active" data-val="digits">0–9</div>
+          <div class="opt" data-val="letters">A–Z</div>
+          <div class="opt" data-val="mixed">Mixed</div>
+        </div>
+      </div>
+      <div class="meta-row">
+        <div>
+          <span class="chip">Span <b id="lvl">3</b></span>
+          <span class="chip">Score <b id="score">0</b></span>
+          <span class="chip">Streak <b id="streak">0</b></span>
+        </div>
+        <div><span class="chip" id="modeChip">All at once</span></div>
+      </div>
+    `,
+    mainHtml:`<div class="ds-display empty" id="display">Press Start</div><div class="ds-keypad" id="keypad"></div>`,
+    helper:'Tip: practise reverse mode hard. The real test ramps quickly.',
+  });
+  host.actions.innerHTML = `<button id="start" class="primary">Start Game</button><button id="reset">Reset</button>`;
+
+  const display = $('display'); const keypad = $('keypad');
+  const elL = $('lvl'); const elS = $('score'); const elSt = $('streak'); const modeChip = $('modeChip');
+  const dirToggle = $('dirToggle'); const setToggle = $('setToggle');
+  const REVEAL = { All:'all-at-once', Seq:'one-by-one', Halves:'halves' };
+  let opts = { direction:'forward', charset:'digits' };
+  let state = fresh();
+  function fresh(){return{level:3,score:0,streak:0,bestStreak:0,correct:0,attempted:0,maxLvl:3,active:false,sequence:[],mode:REVEAL.All,userInput:[],qTimer:null,roundStart:0};}
+
+  function bindToggle(el, key) {
+    el.querySelectorAll('.opt').forEach(o => o.addEventListener('click',()=>{
+      if (state && state.active) return;
+      el.querySelectorAll('.opt').forEach(x=>x.classList.remove('active'));
+      o.classList.add('active'); opts[key] = o.dataset.val;
+      renderKeypad();
+    }));
+  }
+  bindToggle(dirToggle,'direction'); bindToggle(setToggle,'charset');
+
+  function modesForSpan(s){
+    // Mode mix gets harder with span: bias toward harder modes higher up.
+    if (s<=3) return [REVEAL.All, REVEAL.Seq];
+    if (s<=5) return [REVEAL.All, REVEAL.Seq, REVEAL.Halves];
+    if (s<=7) return [REVEAL.Seq, REVEAL.Seq, REVEAL.Halves, REVEAL.All]; // Seq weighted
+    return [REVEAL.Seq, REVEAL.Seq, REVEAL.Seq, REVEAL.Halves];           // Seq dominant
+  }
+  function genItem() {
+    if (opts.charset==='digits') return String.fromCharCode(48+R(0,9));
+    const L = 'ABCDEFGHJKLMNPRSTUVWXYZ';
+    if (opts.charset==='letters') return L[R(0,L.length-1)];
+    return Math.random()<.5 ? String.fromCharCode(48+R(0,9)) : L[R(0,L.length-1)];
+  }
+  function genSequence(n){const s=[];for(let i=0;i<n;i++){let c=genItem(),g=0;while(i>0&&c===s[i-1]&&g<12){c=genItem();g++;}s.push(c);}return s;}
+
+  function renderKeypad() {
+    keypad.innerHTML='';
+    let cols = 3;
+    const keys = [];
+    if (opts.charset==='digits') {
+      for (const c of '123456789') keys.push({label:c,val:c});
+      keys.push({label:'0',val:'0'});
+      keys.push({label:'⌫',val:'back',special:true});
+      keys.push({label:'⏎',val:'enter',special:true});
+    } else if (opts.charset==='letters') {
+      cols = 5;
+      for (const L of 'ABCDEFGHJKLMNPRSTUVWXYZ') keys.push({label:L,val:L});
+      keys.push({label:'⌫',val:'back',special:true});
+      keys.push({label:'⏎',val:'enter',special:true});
+    } else {
+      cols = 5;
+      for (const c of '1234567890') keys.push({label:c,val:c});
+      for (const L of 'ABCDEFGHJKLMNPRSTUVWXYZ') keys.push({label:L,val:L});
+      keys.push({label:'⌫',val:'back',special:true});
+      keys.push({label:'⏎',val:'enter',special:true});
+    }
+    keypad.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    keys.forEach(k=>{
+      const el = document.createElement('div'); el.className='ds-key'+(k.special?' special':'')+' disabled';
+      el.textContent = k.label;
+      el.addEventListener('click',()=>onKey(k.val));
+      keypad.appendChild(el);
+    });
+  }
+  renderKeypad();
+  function setKeypadEnabled(on){[...keypad.children].forEach(c=>c.classList.toggle('disabled',!on));}
+
+  function makeRound() {
+    state.sequence = genSequence(state.level);
+    const ms = modesForSpan(state.level); state.mode = ms[R(0,ms.length-1)];
+    const labels = { [REVEAL.All]:'All at once', [REVEAL.Seq]:'One-by-one', [REVEAL.Halves]:'Halves' };
+    modeChip.textContent = labels[state.mode];
+    elL.textContent = state.level; elS.textContent = state.score; elSt.textContent = state.streak;
+    state.maxLvl = Math.max(state.maxLvl, state.level);
+  }
+
+  function paintInput() {
+    const total = state.sequence.length;
+    const masked = state.userInput.join('');
+    const placeholders = '·'.repeat(Math.max(0,total-state.userInput.length));
+    display.classList.remove('empty','dim'); display.textContent = masked + placeholders;
+  }
+  function onKey(v) {
+    if (!state.active || !state.awaitingInput) return;
+    if (v==='back') { state.userInput.pop(); paintInput(); return; }
+    if (v==='enter') { submit(false); return; }
+    if (state.userInput.length >= state.sequence.length) return;
+    state.userInput.push(v); beep(660+state.userInput.length*30,.04,'triangle',.04); paintInput();
+    if (state.userInput.length === state.sequence.length) submit(false);
+  }
+  function progressDownFor(ms){
+    let t = ms; clearInterval(state.qTimer);
+    state.qTimer = setInterval(()=>{ if (!state.active){clearInterval(state.qTimer);return;} t-=100; if(t<0)t=0; host.progress.style.width=(t/ms*100)+'%'; if(t===0) clearInterval(state.qTimer); },100);
+  }
+  function showSeq(cb) {
+    state.awaitingInput = false; setKeypadEnabled(false);
+    display.classList.remove('empty'); host.progress.style.width='100%';
+    const seq = state.sequence;
+    // Reveal speeds tighten aggressively with span — by span 8+ a single digit
+    // flashes ~450ms in Seq mode, classic "really hard" territory.
+    if (state.mode === REVEAL.All) {
+      display.textContent = seq.join('');
+      const view = Math.max(900, 600 + seq.length*Math.max(180, 360 - state.level*15));
+      progressDownFor(view);
+      setTimeout(()=>{ if (!state.active) return; display.textContent=''; cb(); }, view);
+      return;
+    }
+    if (state.mode === REVEAL.Seq) {
+      let i = 0; const step = Math.max(380, 1100 - state.level*70);
+      const tick = ()=>{ if (!state.active) return; if (i>=seq.length){display.textContent='';cb();return;}
+        display.textContent = seq[i]; beep(600+i*20,.05,'sine',.03); i++; setTimeout(tick, step); };
+      tick(); progressDownFor(seq.length*step+200); return;
+    }
+    if (state.mode === REVEAL.Halves) {
+      const h = Math.floor(seq.length/2);
+      const f = seq.slice(0,h).join(''); const s2 = seq.slice(h).join('');
+      const view = Math.max(800, 500 + seq.length*Math.max(160, 300 - state.level*12));
+      display.textContent = f; progressDownFor(view*2);
+      setTimeout(()=>{ if (!state.active) return; display.textContent=s2; setTimeout(()=>{ if (!state.active) return; display.textContent=''; cb(); }, view); }, view);
+    }
+  }
+  function readyInput() {
+    state.awaitingInput = true; setKeypadEnabled(true);
+    state.userInput = []; display.classList.add('dim'); paintInput();
+    const ms = 5000 + state.sequence.length*1100; let t = ms;
+    host.progress.style.width='100%'; clearInterval(state.qTimer);
+    state.qTimer = setInterval(()=>{ if (!state.active){clearInterval(state.qTimer);return;} t-=100; if(t<0)t=0;
+      host.progress.style.width=(t/ms*100)+'%'; if (t===0){clearInterval(state.qTimer); submit(true);} },100);
+    state.roundStart = performance.now();
+  }
+  function submit(timeUp) {
+    if (!state.awaitingInput) return;
+    state.awaitingInput = false; setKeypadEnabled(false); clearInterval(state.qTimer);
+    state.attempted++;
+    const expected = opts.direction==='reverse' ? state.sequence.slice().reverse() : state.sequence;
+    const ok = state.userInput.length===expected.length && state.userInput.every((c,i)=>c.toUpperCase()===expected[i].toUpperCase());
+    if (ok) {
+      beep(900,.12); state.correct++; state.streak++; state.bestStreak = Math.max(state.bestStreak,state.streak);
+      const rt = (performance.now()-state.roundStart)/1000;
+      const sb = Math.max(.5, 1.4 - rt/15); const dm = opts.direction==='reverse'?1.5:1.0;
+      const pts = Math.round(80 * state.level * sb * dm * (1+Math.min(state.streak,9)*.05));
+      state.score += pts;
+      host.status.textContent = `Correct! +${pts}`; host.status.className='status ok';
+      // DigitSpan: bump every correct until span 6, then need streak of 2.
+      setTimeout(()=>{ if (!state.active) return;
+        if (state.level < 6 || state.streak >= 2) state.level = Math.min(15, state.level + 1);
+        makeRound(); cycle(); }, 700);
+    } else {
+      beep(180,.18,'square'); state.streak = 0;
+      host.status.textContent = timeUp ? 'Time up!' : `Wrong (expected ${expected.join('')})`;
+      host.status.className='status fail';
+      setTimeout(()=>{ if (!state.active) return; state.level = Math.max(3, state.level-1); makeRound(); cycle(); }, 1100);
+    }
+  }
+  function cycle(){ host.status.textContent=''; showSeq(readyInput); }
+  let stopTotal = null;
+  function startGame() {
+    state = fresh(); state.active = true;
+    renderKeypad(); makeRound(); cycle();
+    stopTotal = makeTotalTimer(host, ()=>state.active, endGame);
+    $('start').textContent = 'Restart';
+  }
+  function endGame() {
+    state.active = false; clearInterval(state.qTimer); if (stopTotal) stopTotal(); setKeypadEnabled(false);
+    const acc = state.attempted ? state.correct/state.attempted : 0;
+    const isPb = saveRun('digitspan', { score: state.score, level: state.maxLvl, accuracy: acc, correct: state.correct, attempted: state.attempted, streak: state.bestStreak });
+    showModal('DigitSpan — session complete', [
+      ['Final score', state.score.toLocaleString()],
+      ['Max span reached', state.maxLvl],
+      ['Accuracy', Math.round(acc*100)+'%'],
+      ['Correct / Attempted', `${state.correct} / ${state.attempted}`],
+      ['Best streak', state.bestStreak],
+    ], isPb);
+  }
+  $('start').addEventListener('click', startGame);
+  $('reset').addEventListener('click', ()=>{ state.active=false; clearInterval(state.qTimer); if (stopTotal) stopTotal(); state=fresh();
+    host.status.textContent=''; display.textContent='Press Start'; display.classList.add('empty');
+    elL.textContent='3'; elS.textContent='0'; elSt.textContent='0';
+    host.totalClock.textContent=fmtTime(TOTAL); host.progress.style.width='100%';
+    $('start').textContent='Start Game'; });
+  const onKeyboard = e => {
+    if (!state.active || !state.awaitingInput) return;
+    if (e.key==='Backspace'){ onKey('back'); e.preventDefault(); return; }
+    if (e.key==='Enter'){ onKey('enter'); e.preventDefault(); return; }
+    const k = e.key.toUpperCase(); if (/^[0-9A-Z]$/.test(k)) onKey(k);
+  };
+  window.addEventListener('keydown', onKeyboard);
+  currentTeardown = () => { state.active=false; clearInterval(state.qTimer); if (stopTotal) stopTotal(); window.removeEventListener('keydown', onKeyboard); };
+}
+
+// ============================================================
+// 3. FLASHBACK (n-back)
+// ============================================================
+function gameFlashback() {
+  const host = gameShell({
+    id:'flashback', title:'Flashback',
+    subtitle:'Does the shape match the one from <b>N steps</b> ago?',
+    extraTop:`
+      <div class="meta-row">
+        <div>
+          <span class="chip"><b id="nback">1</b>-back</span>
+          <span class="chip">Score <b id="score">0</b></span>
+          <span class="chip">Streak <b id="streak">0</b></span>
+        </div>
+        <div><span class="chip">Item <b id="iCount">0</b></span></div>
+      </div>
+      <div class="fb-rule" id="rule">Press <span class="kbd">M</span> for match, <span class="kbd">N</span> for no-match.</div>
+    `,
+    mainHtml:`
+      <div class="fb-stage"><canvas id="stage" width="400" height="400"></canvas></div>
+      <div class="fb-answers">
+        <button class="btn-big btn-match" id="btnMatch" disabled>Match (M)</button>
+        <button class="btn-big btn-nomatch" id="btnNo" disabled>No Match (N)</button>
+      </div>`,
+    helper:'Shapes flash for ~1.2s. N climbs after a streak of correct answers.',
+  });
+  host.actions.innerHTML = `<button id="start" class="primary">Start Game</button><button id="reset">Reset</button>`;
+  const ctx = $('stage').getContext('2d');
+  const btnMatch = $('btnMatch'); const btnNo = $('btnNo');
+  const eN = $('nback'); const eS = $('score'); const eSt = $('streak'); const eI = $('iCount'); const rule = $('rule');
+
+  const FORMS=['circle','square','triangle','diamond','pentagon','hexagon'];
+  const COLORS=['#ef4444','#2f81f7','#22c55e','#eab308','#a855f7','#06b6d4'];
+  const BANDS=['none','top','bottom'];
+  const mk = () => ({ form:pick(FORMS), color:pick(COLORS), band:pick(BANDS) });
+  const eq = (a,b)=> a && b && a.form===b.form && a.color===b.color && a.band===b.band;
+
+  function draw(s) {
+    const w=ctx.canvas.width, h=ctx.canvas.height; ctx.clearRect(0,0,w,h);
+    if (!s) return;
+    const cx=w/2, cy=h/2, r=110;
+    ctx.fillStyle = s.color; ctx.strokeStyle='#0b0f17'; ctx.lineWidth=4; ctx.beginPath();
+    switch(s.form){
+      case 'circle': ctx.arc(cx,cy,r,0,Math.PI*2); break;
+      case 'square': ctx.rect(cx-r,cy-r,r*2,r*2); break;
+      case 'triangle':{const a=r*1.15;ctx.moveTo(cx,cy-a);ctx.lineTo(cx-a*.95,cy+a*.7);ctx.lineTo(cx+a*.95,cy+a*.7);ctx.closePath();break;}
+      case 'diamond': ctx.moveTo(cx,cy-r);ctx.lineTo(cx+r,cy);ctx.lineTo(cx,cy+r);ctx.lineTo(cx-r,cy);ctx.closePath();break;
+      case 'pentagon':{for(let i=0;i<5;i++){const a=-Math.PI/2+i*Math.PI*2/5;const x=cx+r*Math.cos(a),y=cy+r*Math.sin(a);(i===0)?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.closePath();break;}
+      case 'hexagon':{for(let i=0;i<6;i++){const a=i*Math.PI/3;const x=cx+r*Math.cos(a),y=cy+r*Math.sin(a);(i===0)?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.closePath();break;}
+    }
+    ctx.fill(); ctx.stroke();
+    if (s.band!=='none') {
+      ctx.fillStyle='rgba(255,255,255,.45)';
+      const bw=r*1.6, bh=22, by = s.band==='top' ? cy-r+10 : cy+r-32;
+      ctx.fillRect(cx-bw/2, by, bw, bh);
+    }
+  }
+
+  let state = fresh();
+  function fresh(){return{active:false,nLevel:1,maxN:1,score:0,streak:0,bestStreak:0,history:[],itemIdx:0,awaiting:false,correct:0,attempted:0,rts:[],roundStart:0,qTimer:null};}
+  function nextShape() {
+    const n=state.nLevel; const need=state.history.length;
+    if (need<n){const s=mk();state.history.push(s);return s;}
+    const target = state.history[state.history.length-n];
+    const wantMatch = Math.random()<.33;
+    // Lure rate climbs aggressively with N: 1-back ~25%, 4-back ~45%, 8-back ~60%
+    const wantLure = !wantMatch && Math.random()<Math.min(.60,.20+n*.07);
+    let s;
+    if (wantMatch) s = {...target};
+    else if (wantLure) {
+      const offs = [];
+      if (state.history.length-(n-1)-1>=0) offs.push(n-1);
+      if (state.history.length-(n+1)>=0) offs.push(n+1);
+      const off = offs[R(0,offs.length-1)] || n;
+      const l = state.history[state.history.length-off];
+      if (l && !eq(l,target)) s = {...l}; else { s=mk(); while(eq(s,target)) s=mk(); }
+    } else { s = mk(); while(eq(s,target)) s=mk(); }
+    state.history.push(s); return s;
+  }
+  function truth(){ const n=state.nLevel; if (state.history.length<n+1) return null;
+    return eq(state.history[state.history.length-1], state.history[state.history.length-1-n]); }
+  function enable(on){btnMatch.disabled=!on; btnNo.disabled=!on;}
+
+  let stopTotal = null;
+  function startGame() {
+    state = fresh(); state.active=true;
+    eN.textContent='1'; eS.textContent='0'; eSt.textContent='0'; eI.textContent='0';
+    enable(false); stopTotal = makeTotalTimer(host, ()=>state.active, endGame);
+    nextTrial(); $('start').textContent='Restart';
+  }
+  function nextTrial() {
+    if (!state.active) return;
+    const s = nextShape(); state.itemIdx++; eI.textContent=state.itemIdx;
+    draw(s); beep(500+state.itemIdx*8,.05,'sine',.025);
+    if (state.history.length <= state.nLevel) {
+      rule.innerHTML = `Building up… <b>${state.nLevel - state.history.length + 1}</b> more before decisions.`;
+      enable(false); clearInterval(state.qTimer);
+      const view=1100; let t=view; host.progress.style.width='100%';
+      state.qTimer = setInterval(()=>{ if (!state.active){clearInterval(state.qTimer);return;} t-=100; if(t<0)t=0;
+        host.progress.style.width=(t/view*100)+'%'; if(t===0){clearInterval(state.qTimer);draw(null);setTimeout(()=>{if(state.active)nextTrial();},250);} },100);
+      return;
+    }
+    rule.innerHTML = `Match the shape <b>${state.nLevel}</b> step${state.nLevel===1?'':'s'} ago? (<span class="kbd">M</span>/<span class="kbd">N</span>)`;
+    enable(true); state.awaiting = true; state.roundStart = performance.now();
+    // Shrink decision window aggressively at high N: 1-back=2200ms, 4-back=1400ms, 8-back=900ms
+    const view = Math.max(900, 2400 - state.nLevel*250); let t = view;
+    host.progress.style.width='100%'; clearInterval(state.qTimer);
+    state.qTimer = setInterval(()=>{ if (!state.active){clearInterval(state.qTimer);return;} t-=100; if(t<0)t=0;
+      host.progress.style.width=(t/view*100)+'%'; if (t===0){clearInterval(state.qTimer); if (state.awaiting) decide(null);} },100);
+  }
+  function decide(userSaidMatch) {
+    if (!state.active || !state.awaiting) return;
+    state.awaiting = false; enable(false);
+    const tr = truth(); const rt = (performance.now()-state.roundStart)/1000;
+    state.attempted++;
+    const ok = userSaidMatch !== null && userSaidMatch === tr;
+    if (ok) {
+      state.correct++; state.rts.push(rt); beep(900,.08);
+      state.streak++; state.bestStreak = Math.max(state.bestStreak,state.streak);
+      const sb = Math.max(.5, 1.4 - rt/3);
+      const pts = Math.round(60 * state.nLevel * sb * (1+Math.min(state.streak,9)*.05));
+      state.score += pts;
+      host.status.textContent = `Correct +${pts}`; host.status.className='status ok';
+      // Bump N every 3 correct (was 4) → faster ramp; cap 8 instead of 6
+      if (state.streak>0 && state.streak%3===0) {
+        state.nLevel = Math.min(8, state.nLevel+1); state.maxN = Math.max(state.maxN, state.nLevel); eN.textContent = state.nLevel;
+      }
+    } else {
+      beep(180,.18,'square'); state.streak = 0;
+      host.status.textContent = userSaidMatch===null ? 'Time up!' : (tr ? 'Wrong — that was a match.' : 'Wrong — not a match.');
+      host.status.className='status fail';
+      if (state.nLevel>1) { state.nLevel--; eN.textContent = state.nLevel; }
+    }
+    eS.textContent = state.score; eSt.textContent = state.streak;
+    setTimeout(()=>{ if (!state.active) return; draw(null); setTimeout(()=>{if(state.active)nextTrial();},220); }, 380);
+  }
+  function endGame() {
+    state.active = false; clearInterval(state.qTimer); if (stopTotal) stopTotal();
+    enable(false); draw(null);
+    const acc = state.attempted ? state.correct/state.attempted : 0;
+    const sorted = state.rts.slice().sort((a,b)=>a-b);
+    const med = sorted.length ? sorted[Math.floor(sorted.length/2)] : null;
+    const isPb = saveRun('flashback', { score: state.score, level: state.maxN, accuracy: acc, correct: state.correct, attempted: state.attempted, rtMedian: med });
+    showModal('Flashback — session complete', [
+      ['Final score', state.score.toLocaleString()],
+      ['Max N-back reached', state.maxN],
+      ['Accuracy', Math.round(acc*100)+'%'],
+      ['Correct / Decisions', `${state.correct} / ${state.attempted}`],
+      ['Median response time', med==null?'—':med.toFixed(2)+'s'],
+    ], isPb);
+  }
+  function flash(b){b.classList.add('flash'); setTimeout(()=>b.classList.remove('flash'),150);}
+  $('start').addEventListener('click', startGame);
+  $('reset').addEventListener('click', ()=>{ state.active=false; clearInterval(state.qTimer); if (stopTotal) stopTotal(); state=fresh(); draw(null);
+    host.status.textContent=''; eN.textContent='1'; eS.textContent='0'; eSt.textContent='0'; eI.textContent='0';
+    host.totalClock.textContent=fmtTime(TOTAL); host.progress.style.width='100%'; $('start').textContent='Start Game'; });
+  btnMatch.addEventListener('click', ()=>{ decide(true); flash(btnMatch); });
+  btnNo.addEventListener('click', ()=>{ decide(false); flash(btnNo); });
+  const onKb = e => { if (!state.active) return;
+    if (e.key==='m'||e.key==='M'){ decide(true); flash(btnMatch); e.preventDefault(); }
+    if (e.key==='n'||e.key==='N'){ decide(false); flash(btnNo); e.preventDefault(); } };
+  window.addEventListener('keydown', onKb);
+  draw(null);
+  currentTeardown = () => { state.active=false; clearInterval(state.qTimer); if (stopTotal) stopTotal(); window.removeEventListener('keydown', onKb); };
+}
+
+// ============================================================
+// 4. PATHFINDER
+// ============================================================
+function gamePathfinder() {
+  const host = gameShell({
+    id:'pathfinder', title:'Pathfinder',
+    subtitle:'Swap two tiles to connect <span style="color:var(--ok)">Start</span> to <span style="color:var(--bad)">End</span>.',
+    extraTop:`
+      <div class="meta-row">
+        <div>
+          <span class="chip">Level <b id="lvl">1</b></span>
+          <span class="chip">Score <b id="score">0</b></span>
+          <span class="chip">Moves <b id="moves">0</b></span>
+        </div>
+        <div><span class="chip">Optimal <b id="opt">0</b></span></div>
+      </div>
+    `,
+    mainHtml:`<div class="pf-board" id="board"></div>`,
+    helper:'Click two tiles to swap them. Start/End are fixed.',
+  });
+  host.actions.innerHTML = `<button id="start" class="primary">Start Game</button><button id="check">Check Path</button><button id="reset">Reset</button>`;
+  const board = $('board');
+  const elL=$('lvl'),elS=$('score'),elM=$('moves'),elO=$('opt');
+  const DX=[0,1,0,-1], DY=[-1,0,1,0], OPP=[2,3,0,1];
+
+  function spec(l){
+    // Faster size ramp + longer paths at top: 3×3 only L1, 5×5 by L4, 7×7 endgame.
+    if(l===1)return{size:3,pathLen:5};
+    if(l===2)return{size:4,pathLen:8};
+    if(l===3)return{size:5,pathLen:11};
+    if(l===4)return{size:5,pathLen:14};
+    if(l===5)return{size:6,pathLen:17};
+    if(l===6)return{size:6,pathLen:22};
+    if(l===7)return{size:7,pathLen:26};
+    return     {size:7,pathLen:32};
+  }
+  function genPath(size, pathLen) {
+    for (let attempt=0; attempt<200; attempt++) {
+      const sy = R(0,size-1), ey = R(0,size-1);
+      const start = {x:0,y:sy}, end = {x:size-1,y:ey};
+      const vis = Array.from({length:size},()=>Array(size).fill(false));
+      const path=[start]; vis[sy][0]=true; let cur=start;
+      const limit = pathLen+10;
+      for (let step=0; step<limit; step++) {
+        const dirs=[0,1,2,3].sort(()=>Math.random()-.5);
+        if (Math.random()<.6) dirs.sort((a,b)=>(b===1?1:0)-(a===1?1:0));
+        let adv=false;
+        for (const d of dirs) {
+          const nx=cur.x+DX[d], ny=cur.y+DY[d];
+          if (nx<0||nx>=size||ny<0||ny>=size||vis[ny][nx]) continue;
+          if (nx===end.x && ny===end.y && path.length+1<pathLen) continue;
+          vis[ny][nx]=true; cur={x:nx,y:ny}; path.push(cur); adv=true; break;
+        }
+        if (!adv) break;
+        if (cur.x===end.x && cur.y===end.y) break;
+      }
+      if (cur.x===end.x && cur.y===end.y && path.length>=Math.min(pathLen,size*2)) return {path,start,end};
+    }
+    const p=[]; for (let x=0;x<size;x++) p.push({x,y:0});
+    return {path:p, start:p[0], end:p[p.length-1]};
+  }
+  function buildBoard(l) {
+    const { size, pathLen } = spec(l);
+    const { path, start, end } = genPath(size, pathLen);
+    const board = Array.from({length:size},()=>Array.from({length:size},()=>({open:[false,false,false,false],kind:'empty'})));
+    for (let i=0;i<path.length;i++) {
+      const p=path[i], t=board[p.y][p.x];
+      if (i>0){ const pr=path[i-1]; const dx=pr.x-p.x, dy=pr.y-p.y; const d=(dy===-1)?0:(dx===1)?1:(dy===1)?2:3; t.open[d]=true; }
+      if (i<path.length-1){ const nx=path[i+1]; const dx=nx.x-p.x, dy=nx.y-p.y; const d=(dy===-1)?0:(dx===1)?1:(dy===1)?2:3; t.open[d]=true; }
+      t.kind='path';
+    }
+    board[start.y][start.x].kind='start'; board[end.y][end.x].kind='end';
+    const distr=[[true,true,false,false],[false,true,true,false],[false,false,true,true],[true,false,false,true],[true,false,true,false],[false,true,false,true],[true,true,true,false],[false,true,true,true],[true,false,true,true],[true,true,false,true]];
+    for (let y=0;y<size;y++) for (let x=0;x<size;x++)
+      if (board[y][x].kind==='empty') board[y][x]={open:distr[R(0,distr.length-1)].slice(),kind:'path'};
+    const swp=[];
+    for (let y=0;y<size;y++) for (let x=0;x<size;x++) if (board[y][x].kind==='path') swp.push({x,y});
+    const swapCount = Math.max(pathLen, Math.floor(swp.length*.85));
+    for (let k=0;k<swapCount;k++) { const a=swp[R(0,swp.length-1)],b=swp[R(0,swp.length-1)]; if(a===b) continue;
+      const t=board[a.y][a.x]; board[a.y][a.x]=board[b.y][b.x]; board[b.y][b.x]=t; }
+    if (isSolved(board,start,end)) { const a=swp[0],b=swp[swp.length-1]; const t=board[a.y][a.x]; board[a.y][a.x]=board[b.y][b.x]; board[b.y][b.x]=t; }
+    return { size, board, start, end, optimalSwaps: Math.ceil(swapCount/2) };
+  }
+  function isSolved(b, s, e) {
+    const n=b.length, seen=Array.from({length:n},()=>Array(n).fill(false));
+    const q=[[s.x,s.y]]; seen[s.y][s.x]=true;
+    while (q.length) {
+      const [x,y]=q.shift(); if (x===e.x&&y===e.y) return true;
+      const t=b[y][x];
+      for (let d=0;d<4;d++) {
+        if (!t.open[d]) continue;
+        const nx=x+DX[d], ny=y+DY[d];
+        if (nx<0||ny<0||nx>=n||ny>=n||seen[ny][nx]) continue;
+        if (!b[ny][nx].open[OPP[d]]) continue;
+        seen[ny][nx]=true; q.push([nx,ny]);
+      }
+    } return false;
+  }
+  function reachable(b, s) {
+    const n=b.length, seen=Array.from({length:n},()=>Array(n).fill(false));
+    const q=[[s.x,s.y]]; seen[s.y][s.x]=true;
+    while (q.length) {
+      const [x,y]=q.shift(); const t=b[y][x];
+      for (let d=0;d<4;d++) {
+        if (!t.open[d]) continue;
+        const nx=x+DX[d], ny=y+DY[d];
+        if (nx<0||ny<0||nx>=n||ny>=n||seen[ny][nx]) continue;
+        if (!b[ny][nx].open[OPP[d]]) continue;
+        seen[ny][nx]=true; q.push([nx,ny]);
+      }
+    } return seen;
+  }
+  function svgTile(t, s) {
+    const cx=s/2; const stroke = t.kind==='start'?'#22c55e':(t.kind==='end'?'#ef4444':'#9bc1ff');
+    const sw=Math.max(8,s*.18);
+    const eps=[[cx,0],[s,cx],[cx,s],[0,cx]];
+    let L=''; for (let d=0;d<4;d++) if (t.open[d]) L+=`<line x1="${cx}" y1="${cx}" x2="${eps[d][0]}" y2="${eps[d][1]}" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round"/>`;
+    let cap=''; if (t.kind==='start'||t.kind==='end') { const col=t.kind==='start'?'#22c55e':'#ef4444'; cap=`<circle cx="${cx}" cy="${cx}" r="${Math.max(8,s*.12)}" fill="${col}"/>`; }
+    const dot=(t.kind!=='start'&&t.kind!=='end'&&t.open.some(x=>x))?`<circle cx="${cx}" cy="${cx}" r="${Math.max(4,sw*.42)}" fill="${stroke}" opacity=".7"/>`:'';
+    return `<svg viewBox="0 0 ${s} ${s}">${L}${dot}${cap}</svg>`;
+  }
+
+  let state = fresh();
+  function fresh(){return{active:false,level:1,maxLevel:1,score:0,solved:0,moves:0,board:null,size:3,start:null,end:null,selected:null,optimalSwaps:0,rts:[],boardStart:0};}
+  function render() {
+    board.innerHTML=''; board.style.gridTemplateColumns=`repeat(${state.size}, 1fr)`;
+    const cellPx = Math.min(72, Math.floor(380/state.size));
+    const reach = reachable(state.board, state.start);
+    for (let y=0;y<state.size;y++) for (let x=0;x<state.size;x++) {
+      const t = state.board[y][x];
+      const c = document.createElement('div'); c.className='pf-cell';
+      c.style.width=cellPx+'px'; c.style.height=cellPx+'px';
+      if (t.kind==='start'||t.kind==='end') c.classList.add('fixed');
+      if (reach[y][x]) c.classList.add('connected');
+      if (state.selected && state.selected.x===x && state.selected.y===y) c.classList.add('selected');
+      c.innerHTML = svgTile(t, cellPx);
+      if (t.kind==='start'){const b=document.createElement('div');b.className='pf-badge';b.textContent='S';b.style.color='#22c55e';c.appendChild(b);}
+      if (t.kind==='end')  {const b=document.createElement('div');b.className='pf-badge';b.textContent='E';b.style.color='#ef4444';c.appendChild(b);}
+      c.addEventListener('click', ()=>onClick(x,y));
+      board.appendChild(c);
+    }
+    elM.textContent=state.moves; elS.textContent=state.score; elL.textContent=state.level; elO.textContent=state.optimalSwaps;
+    if (reach[state.end.y][state.end.x]) { host.status.textContent='Path connected! Click "Check Path".'; host.status.className='status ok'; }
+    else { host.status.textContent=''; host.status.className='status'; }
+  }
+  function onClick(x,y) {
+    if (!state.active) return;
+    const t = state.board[y][x];
+    if (t.kind==='start'||t.kind==='end') { beep(220,.08,'square',.04); return; }
+    if (state.selected) {
+      if (state.selected.x===x && state.selected.y===y) { state.selected=null; render(); return; }
+      const a = state.selected;
+      const tmp=state.board[a.y][a.x]; state.board[a.y][a.x]=state.board[y][x]; state.board[y][x]=tmp;
+      state.selected=null; state.moves++; beep(620,.06); render();
+    } else { state.selected={x,y}; beep(440,.05); render(); }
+  }
+  function onCheck() {
+    if (!state.active) return;
+    if (isSolved(state.board, state.start, state.end)) {
+      const rt = (performance.now()-state.boardStart)/1000;
+      state.rts.push(rt); beep(900,.14);
+      const mp = Math.max(.4, 1 - Math.max(0, state.moves - state.optimalSwaps)*.05);
+      const sb = Math.max(.4, 1.6 - rt/40);
+      const pts = Math.round(250 * state.level * sb * mp);
+      state.score += pts; state.solved++;
+      host.status.textContent=`Solved! +${pts}`; host.status.className='status ok';
+      state.level = Math.min(8, state.level+1); state.maxLevel = Math.max(state.maxLevel, state.level);
+      setTimeout(()=>{ if (state.active) startNewBoard(); }, 800);
+    } else { beep(180,.18,'square'); host.status.textContent='Not connected yet — keep going.'; host.status.className='status fail'; }
+  }
+  function startNewBoard() {
+    const r = buildBoard(state.level);
+    state.size=r.size; state.board=r.board; state.start=r.start; state.end=r.end;
+    state.optimalSwaps=r.optimalSwaps; state.moves=0; state.selected=null; state.boardStart=performance.now();
+    render();
+  }
+  let stopTotal = null;
+  function startGame() {
+    state = fresh(); state.active=true;
+    stopTotal = makeTotalTimer(host, ()=>state.active, endGame);
+    // drive progress as countdown of total
+    const pTimer = setInterval(()=>{ if (!state.active){clearInterval(pTimer);return;}
+      const left = parseInt(host.totalClock.textContent.split(':').reduce((a,b)=>+a*60+ +b,0),10);
+      host.progress.style.width = (left/TOTAL*100)+'%';
+    }, 250);
+    state._pT = pTimer;
+    startNewBoard(); $('start').textContent='Restart';
+  }
+  function endGame() {
+    state.active=false; if (stopTotal) stopTotal(); clearInterval(state._pT);
+    const sorted = state.rts.slice().sort((a,b)=>a-b);
+    const med = sorted.length ? sorted[Math.floor(sorted.length/2)] : null;
+    const isPb = saveRun('pathfinder', { score: state.score, level: state.maxLevel, solved: state.solved, accuracy: state.solved>0?1:0, rtMedian: med });
+    showModal('Pathfinder — session complete', [
+      ['Final score', state.score.toLocaleString()],
+      ['Max level reached', state.maxLevel],
+      ['Solved boards', state.solved],
+      ['Median solve time', med==null?'—':med.toFixed(1)+'s'],
+    ], isPb);
+  }
+  $('start').addEventListener('click', startGame);
+  $('check').addEventListener('click', onCheck);
+  $('reset').addEventListener('click', ()=>{ state.active=false; if (stopTotal) stopTotal(); clearInterval(state._pT); state=fresh();
+    board.innerHTML=''; host.status.textContent=''; elL.textContent='1'; elS.textContent='0'; elM.textContent='0'; elO.textContent='0';
+    host.totalClock.textContent=fmtTime(TOTAL); host.progress.style.width='100%'; $('start').textContent='Start Game'; });
+  currentTeardown = () => { state.active=false; if (stopTotal) stopTotal(); clearInterval(state._pT); };
+}
+
+// ============================================================
+// 5. PUZZLE
+// ============================================================
+function gamePuzzle() {
+  const host = gameShell({
+    id:'puzzle', title:'Puzzle',
+    subtitle:'Memorize the picture, then slide tiles to rebuild it.',
+    extraTop:`
+      <div class="meta-row">
+        <div>
+          <span class="chip">Level <b id="lvl">1</b></span>
+          <span class="chip">Score <b id="score">0</b></span>
+          <span class="chip">Moves <b id="moves">0</b></span>
+          <span class="chip">Solved <b id="solved">0</b></span>
+        </div>
+        <div><span class="chip">Grid <b id="gridChip">3×3</b></span></div>
+      </div>
+    `,
+    mainHtml:`
+      <div class="pz-stage">
+        <div class="pz-preview" id="previewWrap">
+          <div class="label">Reference</div>
+          <canvas id="preview"></canvas>
+        </div>
+        <div class="pz-board" id="board"><canvas id="boardBg"></canvas></div>
+      </div>
+    `,
+    helper:'Click a tile next to the gap to slide it.',
+  });
+  host.actions.innerHTML = `<button id="start" class="primary">Start Game</button><button id="reset">Reset</button><label class="switch"><input type="checkbox" id="hideRef"> Hide reference</label>`;
+
+  const preview = $('preview'); const previewWrap = $('previewWrap');
+  const board = $('board'); const boardBg = $('boardBg');
+  const elL=$('lvl'),elS=$('score'),elM=$('moves'),elSv=$('solved'),elG=$('gridChip');
+
+  function drawImg(ctx, size, seed) {
+    ctx.clearRect(0,0,size,size);
+    const hue = seed*53 % 360;
+    ctx.fillStyle = `hsl(${hue},30%,18%)`; ctx.fillRect(0,0,size,size);
+    const pal = [`hsl(${hue},70%,55%)`,`hsl(${(hue+90)%360},70%,55%)`,`hsl(${(hue+180)%360},70%,55%)`,`hsl(${(hue+270)%360},70%,55%)`];
+    const h=size/2; const ord=[0,1,2,3].slice().sort(()=>((seed*7)%2)?1:-1).sort(()=>Math.random()-.5);
+    ctx.fillStyle=pal[ord[0]]; ctx.fillRect(0,0,h,h);
+    ctx.fillStyle=pal[ord[1]]; ctx.fillRect(h,0,h,h);
+    ctx.fillStyle=pal[ord[2]]; ctx.fillRect(0,h,h,h);
+    ctx.fillStyle=pal[ord[3]]; ctx.fillRect(h,h,h,h);
+    ctx.beginPath(); ctx.arc(size*.5+(seed%7-3)*8, size*.5+((seed*3)%7-3)*8, size*.28, 0, Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,.18)'; ctx.fill();
+    ctx.save(); ctx.globalAlpha=.18; ctx.strokeStyle='#fff'; ctx.lineWidth=Math.max(3,size/40);
+    const off = (seed*13)%20;
+    for (let x=-size; x<size*2; x+=size/8) { ctx.beginPath(); ctx.moveTo(x+off,0); ctx.lineTo(x+off+size, size); ctx.stroke(); }
+    ctx.restore();
+    const shapes = 5+(seed%4);
+    for (let i=0;i<shapes;i++) {
+      const sx=(seed*97+i*53)%size, sy=(seed*131+i*71)%size, r=12+(i*4)%14;
+      ctx.fillStyle=`hsla(${(hue+60+i*40)%360},80%,65%,.65)`; ctx.beginPath();
+      if (i%3===0) ctx.arc(sx,sy,r,0,Math.PI*2);
+      else if (i%3===1) ctx.rect(sx,sy,r*2,r*2);
+      else {ctx.moveTo(sx,sy-r);ctx.lineTo(sx+r,sy+r);ctx.lineTo(sx-r,sy+r);ctx.closePath();}
+      ctx.fill();
+    }
+    ctx.fillStyle='rgba(255,255,255,.10)'; ctx.font=`bold ${size*.32}px ui-sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('▲', size/2, size/2);
+  }
+  function spec(l){
+    // Memorise window shrinks fast; grid grows to 6×6 endgame.
+    if (l<=1) return{n:3, memMs:3500};
+    if (l<=2) return{n:4, memMs:4000};
+    if (l<=3) return{n:4, memMs:3000};
+    if (l<=4) return{n:5, memMs:3500};
+    if (l<=5) return{n:5, memMs:2400};
+    if (l<=6) return{n:6, memMs:3000};
+    if (l<=7) return{n:6, memMs:2000};
+    return     {n:6, memMs:1500}; // 1.5s glimpse of a 35-tile puzzle
+  }
+
+  let state = fresh();
+  function fresh(){return{active:false,level:1,maxLevel:1,score:0,solved:0,moves:0,n:3,slots:[],emptyIdx:0,seed:1,boardStart:0,rts:[],bigCanvas:null,memorising:false,memTimer:null};}
+  function newPic() {
+    const px=360; const c=document.createElement('canvas'); c.width=px; c.height=px;
+    drawImg(c.getContext('2d'), px, state.seed); state.bigCanvas=c;
+    preview.width=130; preview.height=130; preview.getContext('2d').drawImage(c,0,0,130,130);
+  }
+  function neighbors(idx){const n=state.n,r=Math.floor(idx/n),c=idx%n,o=[];if(r>0)o.push(idx-n);if(r<n-1)o.push(idx+n);if(c>0)o.push(idx-1);if(c<n-1)o.push(idx+1);return o;}
+  function swap(a,b){const t=state.slots[a];state.slots[a]=state.slots[b];state.slots[b]=t;}
+  function solved(){for(let i=0;i<state.slots.length-1;i++)if(state.slots[i]!==i)return false;return state.slots[state.slots.length-1]===-1;}
+  function newPuzzle() {
+    const {n}=spec(state.level); state.n=n; elG.textContent=n+'×'+n;
+    state.seed=Math.floor(Math.random()*1e6); newPic();
+    state.slots=[]; for(let i=0;i<n*n-1;i++) state.slots.push(i); state.slots.push(-1); state.emptyIdx=n*n-1;
+    state.moves=0;
+    const scr=n*n*12; for (let k=0;k<scr;k++){const ng=neighbors(state.emptyIdx); const p=ng[R(0,ng.length-1)]; swap(state.emptyIdx,p); state.emptyIdx=p;}
+    render();
+  }
+  function render() {
+    const n=state.n; const tilePx=Math.floor(Math.min(360,420)/n); const bp=tilePx*n;
+    board.style.width=(bp+12)+'px'; board.style.height=(bp+12)+'px';
+    boardBg.width=bp; boardBg.height=bp;
+    const bg=boardBg.getContext('2d'); bg.fillStyle='#050810'; bg.fillRect(0,0,bp,bp);
+    [...board.querySelectorAll('.pz-tile')].forEach(t=>t.remove());
+    const big=state.bigCanvas;
+    for (let i=0;i<n*n;i++) {
+      const tid=state.slots[i]; const r=Math.floor(i/n),c=i%n;
+      const d=document.createElement('div'); d.className='pz-tile'+(tid===-1?' empty':'');
+      d.style.left=(c*tilePx+6)+'px'; d.style.top=(r*tilePx+6)+'px';
+      d.style.width=tilePx+'px'; d.style.height=tilePx+'px';
+      if (tid!==-1) {
+        const cv=document.createElement('canvas'); cv.width=tilePx; cv.height=tilePx;
+        const cx=cv.getContext('2d'); const sr=Math.floor(tid/n),sc=tid%n; const ss=big.width/n;
+        cx.drawImage(big, sc*ss, sr*ss, ss, ss, 0, 0, tilePx, tilePx);
+        cx.fillStyle='rgba(0,0,0,.45)'; cx.fillRect(0,tilePx-18,22,18);
+        cx.fillStyle='#fff'; cx.font='bold 11px ui-sans-serif'; cx.textAlign='center'; cx.textBaseline='middle';
+        cx.fillText(String(tid+1), 11, tilePx-9);
+        d.appendChild(cv);
+      }
+      d.addEventListener('click', ()=>onTile(i));
+      board.appendChild(d);
+    }
+    elM.textContent=state.moves; elS.textContent=state.score; elL.textContent=state.level; elSv.textContent=state.solved;
+  }
+  function onTile(idx) {
+    if (!state.active || state.memorising) return;
+    if (idx===state.emptyIdx) return;
+    const n=state.n; const r=Math.floor(idx/n),c=idx%n; const er=Math.floor(state.emptyIdx/n),ec=state.emptyIdx%n;
+    if (Math.abs(r-er)+Math.abs(c-ec)!==1) return;
+    swap(idx,state.emptyIdx); state.emptyIdx=idx; state.moves++; beep(580,.04);
+    render();
+    if (solved()) onSolved();
+  }
+  function onSolved() {
+    const rt=(performance.now()-state.boardStart)/1000; state.rts.push(rt); beep(900,.18);
+    state.solved++;
+    const minMoves = state.n*state.n*4;
+    const mp = Math.max(.4, 1 - Math.max(0, state.moves - minMoves)*.005);
+    const sb = Math.max(.4, 1.6 - rt/60);
+    const pts = Math.round(300 * state.level * sb * mp);
+    state.score += pts;
+    host.status.textContent = `Solved in ${rt.toFixed(1)}s, ${state.moves} moves! +${pts}`;
+    host.status.className='status ok';
+    state.level = Math.min(8, state.level+1); state.maxLevel = Math.max(state.maxLevel, state.level);
+    setTimeout(()=>{ if (state.active) startTrial(); }, 900);
+  }
+  function startTrial() {
+    newPuzzle(); state.memorising=true;
+    host.status.textContent='Memorise the reference…'; host.status.className='status';
+    const o=document.createElement('div'); o.className='pz-overlay'; o.textContent='Memorise…'; board.appendChild(o);
+    const ms=spec(state.level).memMs; let t=ms; host.progress.style.width='100%';
+    clearInterval(state.memTimer);
+    state.memTimer = setInterval(()=>{ if (!state.active){clearInterval(state.memTimer);return;} t-=100; if(t<0)t=0;
+      host.progress.style.width=(t/ms*100)+'%'; if (t===0){clearInterval(state.memTimer); o.remove();
+        state.memorising=false; state.boardStart=performance.now();
+        previewWrap.style.visibility = $('hideRef').checked ? 'hidden' : 'visible';
+        host.status.textContent='Solve it!'; } }, 100);
+  }
+  let stopTotal = null;
+  function startGame() {
+    state=fresh(); state.active=true;
+    stopTotal = makeTotalTimer(host, ()=>state.active, endGame);
+    startTrial(); $('start').textContent='Restart';
+  }
+  function endGame() {
+    state.active=false; if (stopTotal) stopTotal(); clearInterval(state.memTimer);
+    const sorted=state.rts.slice().sort((a,b)=>a-b); const med=sorted.length?sorted[Math.floor(sorted.length/2)]:null;
+    const isPb = saveRun('puzzle', { score: state.score, level: state.maxLevel, solved: state.solved, accuracy: state.solved>0?1:0, rtMedian: med });
+    const sz = spec(state.maxLevel).n;
+    showModal('Puzzle — session complete', [
+      ['Final score', state.score.toLocaleString()],
+      ['Max grid solved', sz+'×'+sz],
+      ['Puzzles solved', state.solved],
+      ['Median solve time', med==null?'—':med.toFixed(1)+'s'],
+    ], isPb);
+  }
+  $('start').addEventListener('click', startGame);
+  $('reset').addEventListener('click', ()=>{ state.active=false; if (stopTotal) stopTotal(); clearInterval(state.memTimer); state=fresh();
+    [...board.querySelectorAll('.pz-tile')].forEach(t=>t.remove());
+    boardBg.getContext('2d').clearRect(0,0,boardBg.width,boardBg.height);
+    preview.getContext('2d').clearRect(0,0,preview.width,preview.height);
+    elL.textContent='1'; elS.textContent='0'; elM.textContent='0'; elSv.textContent='0';
+    elG.textContent='3×3'; host.status.textContent='';
+    host.totalClock.textContent=fmtTime(TOTAL); host.progress.style.width='100%'; $('start').textContent='Start Game'; });
+  currentTeardown = () => { state.active=false; if (stopTotal) stopTotal(); clearInterval(state.memTimer); };
+}
+
+// ============================================================
+// 6. SHAPEDANCE
+// ============================================================
+function gameShapedance() {
+  const host = gameShell({
+    id:'shapedance', title:'Shapedance',
+    subtitle:'Select all tiles matching the target. Rotation does not change identity.',
+    extraTop:`
+      <div class="meta-row">
+        <div>
+          <span class="chip">Level <b id="lvl">1</b></span>
+          <span class="chip">Score <b id="score">0</b></span>
+          <span class="chip">Streak <b id="streak">0</b></span>
+        </div>
+        <div><span class="chip">Grid <b id="gridChip">2×2</b></span></div>
+      </div>
+      <div class="sd-target-area">
+        <div>
+          <div class="sd-target-label">Target</div>
+          <div class="sd-target-tile"><canvas id="target"></canvas></div>
+        </div>
+      </div>
+    `,
+    mainHtml:`<div class="sd-grid" id="grid"></div>`,
+    helper:'Select every match — partial credit is not given. Some tiles spin; ignore motion.',
+  });
+  host.actions.innerHTML = `<button id="start" class="primary">Start Game</button><button id="compare">Compare</button><button id="reset">Reset</button>`;
+  const target=$('target'); const grid=$('grid');
+  const elL=$('lvl'),elS=$('score'),elSt=$('streak'),elG=$('gridChip');
+  const COL=['#ef4444','#2f81f7','#eab308','#22c55e'];
+
+  function rotCW(g){const n=g.length,r=Array.from({length:n},()=>Array(n));for(let i=0;i<n;i++)for(let j=0;j<n;j++)r[j][n-1-i]=g[i][j];return r;}
+  function gridEq(a,b){if(a.length!==b.length)return false;for(let i=0;i<a.length;i++)for(let j=0;j<a.length;j++)if(a[i][j]!==b[i][j])return false;return true;}
+  function eqRot(a,b){if(gridEq(a,b))return true;let r=b;for(let k=0;k<3;k++){r=rotCW(r);if(gridEq(a,r))return true;}return false;}
+  function clone(g){return g.map(r=>r.slice());}
+  function distinct(g){const s=new Set();for(const r of g)for(const v of r)if(v!==-1)s.add(v);return s.size;}
+  function randomGrid(n){
+    const tot=n*n; const minF=Math.max(2,Math.floor(.45*tot)); const maxF=Math.max(minF,Math.floor(.7*tot));
+    const fill=minF+R(0,maxF-minF); const g=Array.from({length:n},()=>Array(n).fill(-1));
+    const idxs=Array.from({length:tot},(_,k)=>k).sort(()=>Math.random()-.5).slice(0,fill);
+    const pal = n<=3?3:4;
+    for (const idx of idxs) g[Math.floor(idx/n)][idx%n]=R(0,pal-1);
+    if (distinct(g)<2) { const [i,j]=[R(0,n-1),R(0,n-1)]; g[i][j]=R(0,3); }
+    return g;
+  }
+  function mutate(g, intensity=.4) {
+    const n=g.length, tot=n*n; const k=Math.max(1,Math.floor(tot*intensity));
+    const out=clone(g); const idxs=Array.from({length:tot},(_,i)=>i).sort(()=>Math.random()-.5).slice(0,k);
+    for (const idx of idxs) {
+      const i=Math.floor(idx/n), j=idx%n; const r=Math.random();
+      if (r<.4) { const cur=out[i][j]; let s=R(0,3); while(cur!==-1&&s===cur) s=R(0,3); out[i][j]=s; }
+      else if (r<.7) out[i][j]=-1;
+      else out[i][j]= out[i][j]===-1 ? R(0,3) : (out[i][j]+1)%4;
+    }
+    if (eqRot(g,out)) { const i=R(0,n-1),j=R(0,n-1); out[i][j]=out[i][j]===-1?R(0,3):-1; }
+    return out;
+  }
+  function drawP(ctx, g) {
+    const n=g.length; const w=ctx.canvas.width, h=ctx.canvas.height;
+    ctx.clearRect(0,0,w,h); ctx.fillStyle='#0f172a'; ctx.fillRect(0,0,w,h);
+    const cell=Math.min(w,h)/n; ctx.strokeStyle='#22304a'; ctx.lineWidth=1;
+    for (let i=1;i<n;i++){ ctx.beginPath();ctx.moveTo(i*cell,0);ctx.lineTo(i*cell,h);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,i*cell);ctx.lineTo(w,i*cell);ctx.stroke(); }
+    for (let i=0;i<n;i++) for (let j=0;j<n;j++) {
+      const v=g[i][j]; if (v===-1) continue;
+      const cx=j*cell+cell/2, cy=i*cell+cell/2, r=cell*.30; ctx.fillStyle=COL[v];
+      if (v===0){ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();}
+      else if (v===1){const s=r*1.6;ctx.fillRect(cx-s/2,cy-s/2,s,s);}
+      else if (v===2){ctx.beginPath();ctx.moveTo(cx,cy-r);ctx.lineTo(cx-r,cy+r*.85);ctx.lineTo(cx+r,cy+r*.85);ctx.closePath();ctx.fill();}
+      else {ctx.beginPath();ctx.moveTo(cx,cy-r);ctx.lineTo(cx+r,cy);ctx.lineTo(cx,cy+r);ctx.lineTo(cx-r,cy);ctx.closePath();ctx.fill();}
+    }
+    ctx.strokeStyle='#3b4660'; ctx.lineWidth=2; ctx.strokeRect(1,1,w-2,h-2);
+  }
+  function spec(l){
+    // mutI = how many cells differ in a distractor; SMALLER = harder (near-miss)
+    // Tile count climbs to 9 (3×3 of tiles) at top levels — much busier scan.
+    if (l<=1) return{size:2, tiles:4, mutI:.5,  spinP:0};
+    if (l<=2) return{size:3, tiles:6, mutI:.4,  spinP:.15};
+    if (l<=3) return{size:3, tiles:6, mutI:.30, spinP:.25};
+    if (l<=5) return{size:4, tiles:6, mutI:.25, spinP:.30};
+    if (l<=7) return{size:4, tiles:8, mutI:.18, spinP:.40};
+    if (l<=9) return{size:5, tiles:8, mutI:.16, spinP:.45};
+    if (l<=12)return{size:5, tiles:9, mutI:.12, spinP:.55};
+    return     {size:6, tiles:9, mutI:.10, spinP:.65};
+  }
+
+  let state = fresh();
+  function fresh(){return{active:false,level:1,maxLevel:1,score:0,streak:0,bestStreak:0,correct:0,attempted:0,target:null,options:null,correctSet:null,selected:new Set(),roundStart:0,qTimer:null};}
+  function build() {
+    const s=spec(state.level); state.target=randomGrid(s.size);
+    const tiles=s.tiles; const minM=2; const maxM=Math.max(minM,Math.floor(tiles/2)+1); const numM=minM+R(0,maxM-minM);
+    const numD=tiles-numM;
+    const opts=[];
+    for (let i=0;i<numM;i++) opts.push({grid:state.target, rotate:R(0,3)*90, spin:Math.random()<s.spinP});
+    let g=0;
+    while (opts.filter(o=>!eqRot(state.target,o.grid)).length<numD && g<200) {
+      g++; const c=mutate(state.target, s.mutI); if (eqRot(state.target,c)) continue;
+      opts.push({grid:c, rotate:R(0,3)*90, spin:Math.random()<s.spinP});
+    }
+    for (let i=opts.length-1;i>0;i--){const j=R(0,i);[opts[i],opts[j]]=[opts[j],opts[i]];}
+    state.options=opts;
+    state.correctSet=new Set(opts.map((o,i)=>eqRot(state.target,o.grid)?i:-1).filter(i=>i!==-1));
+    state.selected=new Set();
+    elG.textContent=s.size+'×'+s.size;
+  }
+  function render() {
+    target.width=160; target.height=160; drawP(target.getContext('2d'), state.target);
+    grid.innerHTML='';
+    state.options.forEach((opt,idx)=>{
+      const tile=document.createElement('div'); tile.className='sd-tile';
+      const wrap=document.createElement('div'); wrap.className='sd-rot'; wrap.style.transform=`rotate(${opt.rotate}deg)`;
+      const inner=document.createElement('div'); if (opt.spin) inner.classList.add('sd-spin');
+      const cv=document.createElement('canvas'); cv.width=140; cv.height=140; drawP(cv.getContext('2d'), opt.grid);
+      inner.appendChild(cv); wrap.appendChild(inner); tile.appendChild(wrap);
+      tile.addEventListener('click', ()=>toggle(idx)); grid.appendChild(tile);
+    });
+    elL.textContent=state.level; elS.textContent=state.score; elSt.textContent=state.streak;
+    state.roundStart=performance.now(); startQTimer();
+  }
+  function toggle(i) {
+    if (!state.active) return;
+    const el=grid.children[i];
+    if (state.selected.has(i)) { state.selected.delete(i); el.classList.remove('selected'); }
+    else { state.selected.add(i); el.classList.add('selected'); beep(700,.04,'triangle',.04); }
+  }
+  function compare() {
+    if (!state.active) return;
+    clearInterval(state.qTimer); state.attempted++;
+    let ok = state.correctSet.size===state.selected.size;
+    if (ok) for (const v of state.correctSet) if (!state.selected.has(v)) { ok=false; break; }
+    const rt=(performance.now()-state.roundStart)/1000;
+    if (ok) {
+      state.correct++; state.streak++; state.bestStreak=Math.max(state.bestStreak,state.streak); beep(900,.12);
+      const sb=Math.max(.5,1.4-rt/22); const pts=Math.round(150*state.level*sb*(1+Math.min(state.streak,9)*.04));
+      state.score+=pts; host.status.textContent=`Correct! +${pts}`; host.status.className='status ok';
+      // Shapedance: bump every correct until L4, then need streak of 2; cap 16.
+      setTimeout(()=>{ if (!state.active) return;
+        if (state.level < 4 || state.streak >= 2) { state.level = Math.min(16, state.level + 1); state.maxLevel = Math.max(state.maxLevel, state.level); }
+        build(); render(); }, 700);
+    } else {
+      beep(180,.18,'square'); state.streak=0; host.status.textContent='Wrong — try a slower scan.'; host.status.className='status fail';
+      setTimeout(()=>{ if (!state.active) return; state.level=Math.max(1,state.level-1); build(); render(); }, 900);
+    }
+  }
+  function startQTimer() {
+    const budget=Math.max(15,35-state.level*1.2); let t=budget;
+    host.progress.style.width='100%'; clearInterval(state.qTimer);
+    state.qTimer=setInterval(()=>{ if (!state.active){clearInterval(state.qTimer);return;} t-=.1; if(t<0)t=0;
+      host.progress.style.width=(t/budget*100)+'%'; if (t===0){clearInterval(state.qTimer); compare();} },100);
+  }
+  let stopTotal = null;
+  function startGame() {
+    state=fresh(); state.active=true; build(); render();
+    stopTotal=makeTotalTimer(host, ()=>state.active, endGame); $('start').textContent='Restart';
+  }
+  function endGame() {
+    state.active=false; clearInterval(state.qTimer); if (stopTotal) stopTotal();
+    const acc=state.attempted?state.correct/state.attempted:0;
+    const isPb=saveRun('shapedance', { score: state.score, level: state.maxLevel, accuracy: acc, correct: state.correct, attempted: state.attempted, streak: state.bestStreak });
+    showModal('Shapedance — session complete', [
+      ['Final score', state.score.toLocaleString()],
+      ['Max level reached', state.maxLevel],
+      ['Accuracy', Math.round(acc*100)+'%'],
+      ['Correct / Attempted', `${state.correct} / ${state.attempted}`],
+      ['Best streak', state.bestStreak],
+    ], isPb);
+  }
+  $('start').addEventListener('click', startGame);
+  $('compare').addEventListener('click', compare);
+  $('reset').addEventListener('click', ()=>{ state.active=false; clearInterval(state.qTimer); if (stopTotal) stopTotal(); state=fresh();
+    grid.innerHTML=''; host.status.textContent=''; target.getContext('2d').clearRect(0,0,target.width,target.height);
+    elL.textContent='1'; elS.textContent='0'; elSt.textContent='0'; elG.textContent='2×2';
+    host.totalClock.textContent=fmtTime(TOTAL); host.progress.style.width='100%'; $('start').textContent='Start Game'; });
+  currentTeardown = () => { state.active=false; clearInterval(state.qTimer); if (stopTotal) stopTotal(); };
+}
+
+// ============================================================
+// 7. SINGULARITY
+// ============================================================
+function gameSingularity() {
+  const host = gameShell({
+    id:'singularity', title:'Singularity',
+    subtitle:'Click the one unique shape. Rotation alone does <b>not</b> count.',
+    extraTop:`
+      <div class="meta-row">
+        <div>
+          <span class="chip">Level <b id="lvl">1</b></span>
+          <span class="chip">Score <b id="score">0</b></span>
+          <span class="chip">Streak <b id="streak">0</b></span>
+        </div>
+        <div><span class="chip">Tiles <b id="tilesChip">9</b></span></div>
+      </div>
+    `,
+    mainHtml:`<div class="sn-field" id="field"></div>`,
+    helper:'Scan systematically. Don\'t be fooled by rotated lookalikes.',
+  });
+  host.actions.innerHTML = `<button id="start" class="primary">Start Game</button><button id="reset">Reset</button>`;
+  const field=$('field');
+  const elL=$('lvl'),elS=$('score'),elSt=$('streak'),elT=$('tilesChip');
+
+  const FORMS=['circle','square','triangle','diamond','pentagon','hexagon','star','plus','arrow'];
+  const FILLS=['solid','outline','half-top','half-bottom','dot'];
+  // Distinct vivid palette (easy levels only)
+  const COLORS_VIVID=['#ef4444','#2f81f7','#22c55e','#eab308','#a855f7','#06b6d4','#f97316'];
+  // Close-hue palettes — VERY hard to tell apart at a glance. Used mid-game.
+  const NEAR_BLUE = ['#1e3a8a','#1d4ed8','#2563eb','#3b82f6','#60a5fa'];
+  const NEAR_RED  = ['#7f1d1d','#991b1b','#b91c1c','#dc2626','#ef4444'];
+  const NEAR_GRN  = ['#14532d','#166534','#15803d','#16a34a','#22c55e'];
+  const NEAR_PUR  = ['#581c87','#6b21a8','#7e22ce','#9333ea','#a855f7'];
+  const NEAR_ORA  = ['#7c2d12','#9a3412','#c2410c','#ea580c','#f97316'];
+  const NEAR_PALETTES = [NEAR_BLUE, NEAR_RED, NEAR_GRN, NEAR_PUR, NEAR_ORA];
+  // "Visually confusable" form clusters
+  const FORMS_ROUND = ['circle','pentagon','hexagon'];
+  const FORMS_ANGULAR = ['square','diamond','triangle'];
+  const FORMS_SPIKY = ['star','plus','arrow'];
+
+  function mkBase(p){return{form:pick(p.forms),color:pick(p.colors),fill:pick(p.fills)};}
+  function sEq(a,b){return a.form===b.form&&a.color===b.color&&a.fill===b.fill;}
+  function mkUnique(b,p,allowedAxes){
+    // Pick exactly ONE axis among the allowed ones — and ensure the new value
+    // is within the same restricted pool so the user can't shortcut on a salient
+    // difference (e.g. a totally different color).
+    const ax = pick(allowedAxes);
+    const pool = p[ax+'s'];
+    if (pool.length < 2) return null; // can't differ on this axis
+    const u = {...b};
+    let v = pick(pool); let g = 0;
+    while (v === u[ax] && g++ < 50) v = pick(pool);
+    u[ax] = v;
+    return u;
+  }
+  function shapeSvg(s, sz) {
+    const w=sz,h=sz,cx=w/2,cy=h/2,r=Math.min(w,h)*.36; const col=s.color; const sw=Math.max(2,sz*.10);
+    const path={};
+    path.circle=`<circle cx="${cx}" cy="${cy}" r="${r}" />`;
+    path.square=`<rect x="${cx-r}" y="${cy-r}" width="${r*2}" height="${r*2}" />`;
+    path.triangle=(()=>{const a=r*1.1;return `<polygon points="${cx},${cy-a} ${cx-a*.95},${cy+a*.7} ${cx+a*.95},${cy+a*.7}" />`;})();
+    path.diamond=`<polygon points="${cx},${cy-r} ${cx+r},${cy} ${cx},${cy+r} ${cx-r},${cy}" />`;
+    path.pentagon=(()=>{const p=[];for(let i=0;i<5;i++){const a=-Math.PI/2+i*Math.PI*2/5;p.push((cx+r*Math.cos(a)).toFixed(1)+','+(cy+r*Math.sin(a)).toFixed(1));}return `<polygon points="${p.join(' ')}" />`;})();
+    path.hexagon=(()=>{const p=[];for(let i=0;i<6;i++){const a=i*Math.PI/3;p.push((cx+r*Math.cos(a)).toFixed(1)+','+(cy+r*Math.sin(a)).toFixed(1));}return `<polygon points="${p.join(' ')}" />`;})();
+    path.star=(()=>{const p=[];for(let i=0;i<10;i++){const rad=(i%2===0)?r:r*.45;const a=-Math.PI/2+i*Math.PI/5;p.push((cx+rad*Math.cos(a)).toFixed(1)+','+(cy+rad*Math.sin(a)).toFixed(1));}return `<polygon points="${p.join(' ')}" />`;})();
+    path.plus=(()=>{const t=r*.4;return `<polygon points="${cx-t},${cy-r} ${cx+t},${cy-r} ${cx+t},${cy-t} ${cx+r},${cy-t} ${cx+r},${cy+t} ${cx+t},${cy+t} ${cx+t},${cy+r} ${cx-t},${cy+r} ${cx-t},${cy+t} ${cx-r},${cy+t} ${cx-r},${cy-t} ${cx-t},${cy-t}" />`;})();
+    path.arrow=(()=>{const t=r*.35;return `<polygon points="${cx-r},${cy-t} ${cx+r*.3},${cy-t} ${cx+r*.3},${cy-r*.7} ${cx+r},${cy} ${cx+r*.3},${cy+r*.7} ${cx+r*.3},${cy+t} ${cx-r},${cy+t}" />`;})();
+    let body=path[s.form]; let style='';
+    if (s.fill==='solid') style=`fill="${col}" stroke="none"`;
+    else if (s.fill==='outline') style=`fill="none" stroke="${col}" stroke-width="${sw}"`;
+    if (s.fill==='half-top'||s.fill==='half-bottom') {
+      const id='c'+Math.floor(Math.random()*1e6);
+      const clip = s.fill==='half-top' ? `<rect x="0" y="0" width="${w}" height="${cy}"/>` : `<rect x="0" y="${cy}" width="${w}" height="${cy}"/>`;
+      const defs=`<defs><clipPath id="${id}">${clip}</clipPath></defs>`;
+      const outline = path[s.form].replace('/>',` fill="none" stroke="${col}" stroke-width="${Math.max(2,sw*.6)}"/>`);
+      const fill = path[s.form].replace('/>',` fill="${col}" clip-path="url(#${id})"/>`);
+      return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${defs}${outline}${fill}</svg>`;
+    }
+    if (s.fill==='dot') {
+      const outline = path[s.form].replace('/>',` fill="none" stroke="${col}" stroke-width="${sw}"/>`);
+      const dot = `<circle cx="${cx}" cy="${cy}" r="${r*.25}" fill="${col}"/>`;
+      return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${outline}${dot}</svg>`;
+    }
+    body = body.replace('/>', ' '+style+'/>');
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${body}</svg>`;
+  }
+  function spec(l){
+    // Difficulty design:
+    //  L1-2  : tiny grid, vivid distinct colors, any axis can differ.
+    //  L3-4  : grid 4×4, fewer vivid colors, axis still any.
+    //  L5-6  : grid 5×5, NEAR-hue palette → color differences are subtle.
+    //  L7-9  : grid 6×6, SINGLE near-hue palette (no fallback to vivid),
+    //          unique can differ on color *within* that palette OR fill/form,
+    //          forms restricted to a "confusable cluster".
+    //  L10+  : grid 6×6/7×7, color FIXED across all tiles → unique can only
+    //          differ on fill, and only between visually similar fills (dot vs solid).
+    //  L13+  : grid 7×7/8×8 with rotation noise everywhere.
+    //  L16+  : grid 8×8, fill-only with single subtle axis, lots of spin/drift.
+    const cluster = () => pick([FORMS_ROUND, FORMS_ANGULAR, FORMS_SPIKY]);
+    const nearPal = () => pick(NEAR_PALETTES);
+    if (l<=1) return{ n:3, p:{forms:FORMS.slice(0,3), colors:COLORS_VIVID.slice(0,3), fills:['solid','outline']}, ax:['form','color','fill'], spin:0, drift:0 };
+    if (l<=2) return{ n:4, p:{forms:FORMS.slice(0,4), colors:COLORS_VIVID.slice(0,3), fills:['solid','outline']}, ax:['form','color','fill'], spin:0, drift:0 };
+    if (l<=3) return{ n:4, p:{forms:FORMS.slice(0,5), colors:COLORS_VIVID.slice(0,3), fills:['solid','outline','dot']}, ax:['form','fill'], spin:.2, drift:0 };
+    if (l<=4) return{ n:5, p:{forms:cluster().concat(pick(FORMS_SPIKY)), colors:COLORS_VIVID.slice(0,2), fills:['solid','outline','dot']}, ax:['form','fill'], spin:.25, drift:0 };
+    if (l<=5) return{ n:5, p:{forms:cluster(), colors:nearPal().slice(0,3), fills:['solid','outline','dot']}, ax:['form','color','fill'], spin:.3, drift:.1 };
+    if (l<=6) return{ n:6, p:{forms:cluster(), colors:nearPal().slice(0,4), fills:['solid','outline','dot','half-top']}, ax:['form','color','fill'], spin:.35, drift:.15 };
+    if (l<=8) return{ n:6, p:{forms:cluster(), colors:nearPal(), fills:FILLS}, ax:['form','color','fill'], spin:.40, drift:.20 };
+    if (l<=10){const pal=nearPal(); return{ n:6, p:{forms:cluster(), colors:[pal[2]], fills:FILLS}, ax:['fill','form'], spin:.45, drift:.20 };}
+    if (l<=12){const pal=nearPal(); return{ n:7, p:{forms:cluster(), colors:[pal[2]], fills:FILLS}, ax:['fill'], spin:.50, drift:.25 };}
+    if (l<=14){const pal=nearPal(); return{ n:7, p:{forms:[pick(cluster())], colors:[pal[2]], fills:['solid','dot','outline','half-top']}, ax:['fill'], spin:.55, drift:.30 };}
+    if (l<=16){const pal=nearPal(); return{ n:8, p:{forms:[pick(cluster())], colors:[pal[2]], fills:['solid','dot','outline','half-top','half-bottom']}, ax:['fill'], spin:.60, drift:.30 };}
+    // Endgame: 8×8 = 64 nearly-identical shapes, one differs on fill alone.
+    {const pal=nearPal(); return{ n:8, p:{forms:[pick(cluster())], colors:[pal[2]], fills:FILLS}, ax:['fill'], spin:.65, drift:.35 };}
+  }
+
+  let state = fresh();
+  function fresh(){return{active:false,level:1,maxLevel:1,score:0,streak:0,bestStreak:0,correct:0,attempted:0,rts:[],round:null,uniqueIdx:-1,roundStart:0,qTimer:null};}
+  function build() {
+    const sp = spec(state.level); const n = sp.n, total = n*n;
+    // Resolve axis pool — drop axes whose pool is too small to differ.
+    const allowed = sp.ax.filter(a => sp.p[a+'s'].length >= 2);
+    const safeAllowed = allowed.length ? allowed : ['fill'];
+    let base = mkBase(sp.p);
+    let u = mkUnique(base, sp.p, safeAllowed);
+    let guard = 0;
+    while ((!u || sEq(base, u)) && guard++ < 100) {
+      // Pool too small or unlucky pick — try a different base.
+      base = mkBase(sp.p);
+      u = mkUnique(base, sp.p, safeAllowed);
+    }
+    if (!u) u = { ...base, fill: pick(FILLS.filter(f => f !== base.fill)) || 'outline' };
+    const cells = [];
+    const uniqueAt = R(0, total - 1);
+    // Decide whether rotation should be heterogeneous (looks busier).
+    // At high levels every tile has a random rotation so rotation can't anchor scanning.
+    const rotateEach = state.level >= 3;
+    for (let i = 0; i < total; i++) {
+      cells.push({
+        shape: i === uniqueAt ? u : base,
+        rotate: rotateEach ? R(0, 3) * 90 : 0,
+        spin: Math.random() < sp.spin,
+        drift: Math.random() < sp.drift,
+      });
+    }
+    state.uniqueIdx = uniqueAt;
+    state.round = { cells, n };
+    elT.textContent = total;
+  }
+  function render() {
+    const {cells,n}=state.round;
+    field.style.gridTemplateColumns=`repeat(${n}, 1fr)`; field.innerHTML='';
+    const cp = Math.max(46, Math.min(82, Math.floor(520/n)));
+    cells.forEach((c,idx)=>{
+      const d=document.createElement('div'); d.className='sn-cell'+(c.spin?' spin':'')+(c.drift?' drift':'');
+      d.style.width=cp+'px'; d.style.height=cp+'px';
+      d.innerHTML=`<div style="transform:rotate(${c.rotate}deg)">${shapeSvg(c.shape, Math.floor(cp*.85))}</div>`;
+      d.addEventListener('click', ()=>onClick(idx));
+      field.appendChild(d);
+    });
+    elL.textContent=state.level; elS.textContent=state.score; elSt.textContent=state.streak;
+    state.roundStart=performance.now(); startQTimer();
+  }
+  function onClick(idx) {
+    if (!state.active) return;
+    clearInterval(state.qTimer); state.attempted++;
+    const rt=(performance.now()-state.roundStart)/1000;
+    const cell=field.children[idx];
+    if (idx===state.uniqueIdx) {
+      state.correct++; state.rts.push(rt); state.streak++; state.bestStreak=Math.max(state.bestStreak,state.streak);
+      cell.classList.add('right'); beep(880,.12);
+      const sb=Math.max(.4, 1.6 - rt/8);
+      const pts=Math.round(100*state.level*sb*(1+Math.min(state.streak,9)*.05));
+      state.score+=pts; host.status.textContent=`Correct! +${pts} (${rt.toFixed(1)}s)`; host.status.className='status ok';
+      // Bump level on EVERY correct answer until L6, then require streak of 2.
+      // Keeps the easy phase short — you hit the hard part fast.
+      if (state.level < 6 || state.streak >= 2) {
+        state.level = Math.min(25, state.level + 1);
+        state.maxLevel = Math.max(state.maxLevel, state.level);
+      }
+      setTimeout(()=>{ if (state.active){build(); render();} }, 600);
+    } else {
+      cell.classList.add('wrong'); field.children[state.uniqueIdx].classList.add('right');
+      beep(180,.18,'square'); state.streak=0;
+      host.status.textContent='Wrong — that wasn\'t the unique one.'; host.status.className='status fail';
+      setTimeout(()=>{ if (!state.active) return; state.level=Math.max(1,state.level-1); build(); render(); }, 900);
+    }
+  }
+  function startQTimer() {
+    const budget=Math.max(8, 25 - state.level*.9); let t=budget;
+    host.progress.style.width='100%'; clearInterval(state.qTimer);
+    state.qTimer=setInterval(()=>{ if (!state.active){clearInterval(state.qTimer);return;} t-=.1; if(t<0)t=0;
+      host.progress.style.width=(t/budget*100)+'%';
+      if (t===0){ clearInterval(state.qTimer); state.attempted++; state.streak=0;
+        host.status.textContent='Time up!'; host.status.className='status fail';
+        field.children[state.uniqueIdx].classList.add('right');
+        setTimeout(()=>{ if (state.active){state.level=Math.max(1,state.level-1); build(); render();} }, 900); } },100);
+  }
+  let stopTotal = null;
+  function startGame() {
+    state=fresh(); state.active=true; build(); render();
+    stopTotal=makeTotalTimer(host, ()=>state.active, endGame); $('start').textContent='Restart';
+  }
+  function endGame() {
+    state.active=false; clearInterval(state.qTimer); if (stopTotal) stopTotal();
+    const acc=state.attempted?state.correct/state.attempted:0;
+    const sorted=state.rts.slice().sort((a,b)=>a-b); const med=sorted.length?sorted[Math.floor(sorted.length/2)]:null;
+    const isPb=saveRun('singularity', { score: state.score, level: state.maxLevel, accuracy: acc, correct: state.correct, attempted: state.attempted, rtMedian: med });
+    showModal('Singularity — session complete', [
+      ['Final score', state.score.toLocaleString()],
+      ['Max level reached', state.maxLevel],
+      ['Accuracy', Math.round(acc*100)+'%'],
+      ['Correct / Attempted', `${state.correct} / ${state.attempted}`],
+      ['Median response time', med==null?'—':med.toFixed(2)+'s'],
+    ], isPb);
+  }
+  $('start').addEventListener('click', startGame);
+  $('reset').addEventListener('click', ()=>{ state.active=false; clearInterval(state.qTimer); if (stopTotal) stopTotal(); state=fresh();
+    field.innerHTML=''; host.status.textContent=''; elL.textContent='1'; elS.textContent='0'; elSt.textContent='0'; elT.textContent='9';
+    host.totalClock.textContent=fmtTime(TOTAL); host.progress.style.width='100%'; $('start').textContent='Start Game'; });
+  currentTeardown = () => { state.active=false; clearInterval(state.qTimer); if (stopTotal) stopTotal(); };
+}
+
+// ---------- boot ----------
+route();
+})();
+</script>
 </body>
 </html>
-
-
