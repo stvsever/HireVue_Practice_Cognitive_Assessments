@@ -85,7 +85,7 @@
         <span class="chip">Charset:</span>
         <div class="toggle" id="setToggle">
           <div class="opt active" data-val="digits">0–9</div>
-          <div class="opt" data-val="letters">A–Z</div>
+          <div class="opt" data-val="letters">A–O</div>
           <div class="opt" data-val="mixed">Mixed</div>
         </div>
       </div>
@@ -202,15 +202,14 @@
     function genItem() {
       // returns single symbol per charset
       if (opts.charset === 'digits') return String.fromCharCode(48 + Math.floor(Math.random()*10));
+      const POOL = 'ABCDEFGHIJKLMNO';
       if (opts.charset === 'letters') {
-        // skip ambiguous letters I, O, Q
-        const pool = 'ABCDEFGHJKLMNPRSTUVWXYZ';
-        return pool[Math.floor(Math.random() * pool.length)];
+        return POOL[Math.floor(Math.random() * POOL.length)];
       }
       // mixed: 50/50
       return Math.random() < 0.5
         ? String.fromCharCode(48 + Math.floor(Math.random()*10))
-        : 'ABCDEFGHJKLMNPRSTUVWXYZ'[Math.floor(Math.random()*23)];
+        : POOL[Math.floor(Math.random() * POOL.length)];
     }
     function genSequence(len) {
       const seq = [];
@@ -252,7 +251,7 @@
         keys.push({ label: '⏎', val: 'enter', special: true });
       } else if (opts.charset === 'letters') {
         cols = 5;
-        const letters = 'ABCDEFGHJKLMNPRSTUVWXYZ';
+        const letters = 'ABCDEFGHIJKLMNO';
         for (const L of letters) keys.push({ label: L, val: L });
         keys.push({ label: '⌫', val: 'back', special: true });
         keys.push({ label: '⏎', val: 'enter', special: true });
@@ -260,7 +259,7 @@
         // mixed: digits + letters
         cols = 5;
         ['1','2','3','4','5','6','7','8','9','0'].forEach(d => keys.push({ label: d, val: d }));
-        const letters = 'ABCDEFGHJKLMNPRSTUVWXYZ';
+        const letters = 'ABCDEFGHIJKLMNO';
         for (const L of letters) keys.push({ label: L, val: L });
         keys.push({ label: '⌫', val: 'back', special: true });
         keys.push({ label: '⏎', val: 'enter', special: true });

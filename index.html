@@ -637,7 +637,7 @@ function gameDigitspan() {
         <span class="chip">Charset:</span>
         <div class="toggle" id="setToggle">
           <div class="opt active" data-val="digits">0–9</div>
-          <div class="opt" data-val="letters">A–Z</div>
+          <div class="opt" data-val="letters">A–O</div>
           <div class="opt" data-val="mixed">Mixed</div>
         </div>
       </div>
@@ -682,7 +682,7 @@ function gameDigitspan() {
   }
   function genItem() {
     if (opts.charset==='digits') return String.fromCharCode(48+R(0,9));
-    const L = 'ABCDEFGHJKLMNPRSTUVWXYZ';
+    const L = 'ABCDEFGHIJKLMNO';
     if (opts.charset==='letters') return L[R(0,L.length-1)];
     return Math.random()<.5 ? String.fromCharCode(48+R(0,9)) : L[R(0,L.length-1)];
   }
@@ -699,13 +699,13 @@ function gameDigitspan() {
       keys.push({label:'⏎',val:'enter',special:true});
     } else if (opts.charset==='letters') {
       cols = 5;
-      for (const L of 'ABCDEFGHJKLMNPRSTUVWXYZ') keys.push({label:L,val:L});
+      for (const L of 'ABCDEFGHIJKLMNO') keys.push({label:L,val:L});
       keys.push({label:'⌫',val:'back',special:true});
       keys.push({label:'⏎',val:'enter',special:true});
     } else {
       cols = 5;
       for (const c of '1234567890') keys.push({label:c,val:c});
-      for (const L of 'ABCDEFGHJKLMNPRSTUVWXYZ') keys.push({label:L,val:L});
+      for (const L of 'ABCDEFGHIJKLMNO') keys.push({label:L,val:L});
       keys.push({label:'⌫',val:'back',special:true});
       keys.push({label:'⏎',val:'enter',special:true});
     }
