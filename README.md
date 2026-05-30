@@ -7,22 +7,22 @@
 > arrive over-prepared.
 
 <p align="center">
-  <em>⭐ If this helped you land an interview, please star the repo — it's the only signal that tells me to keep maintaining it.</em>
+  <em>⭐ If this helped you land an interview, please star the repo. It's the only signal that tells me to keep maintaining it.</em>
 </p>
 
 ---
 
 ## ✨ Highlights
 
-- 🧩 **7 games**, each fully self-contained — open any single HTML file and play.
-- 🚀 **Zero dependencies, zero build step** — pure HTML / CSS / vanilla JS.
+- 🧩 **7 games**, each fully self-contained. Open any single HTML file and play.
+- 🚀 **Zero dependencies, zero build step.** Pure HTML / CSS / vanilla JS.
 - 📈 **Adaptive difficulty** that pushes past what the real battery exposes.
-- 💾 **Personal-best tracking** via `localStorage` — survives reloads, private to your browser.
+- 💾 **Personal-best tracking** via `localStorage`. Survives reloads, private to your browser.
 - ⏱️ **3-minute session clock** matching the real assessment cadence.
 - 🌐 **Deployable as a static site** (GitHub Pages, Netlify, S3, anything).
 
 > ℹ️ Personality / emotional games (Portrait, PortraitXT, E-Motions, TeamChat)
-> are intentionally omitted — those measure self-report style, not ability,
+> are intentionally omitted: those measure self-report style, not ability,
 > and are not improved by practice.
 
 ---
@@ -51,7 +51,7 @@ python3 -m http.server 8000
 # then open http://localhost:8000/
 ```
 
-Or just **double-click `index.html`** — it's a self-contained single-page app:
+Or just **double-click `index.html`**. It's a self-contained single-page app:
 all 7 games live in one file, hash-based routing (no reloads), zero build step.
 
 ### 🕹️ Two ways to play
@@ -98,7 +98,7 @@ products to the target" distractors so the harder rounds are actually harder.
 ### 🔡 DigitSpan
 Watch a sequence, type it back. Three reveal modes mirror the official test:
 **all-at-once**, **one-by-one**, and **first-half-then-second-half**.
-Reverse mode is also available — and you should practise it; it loads working
+Reverse mode is also available, and you should practise it; it loads working
 memory much harder than forward recall.
 
 ### 🔁 Flashback (n-back)
@@ -110,7 +110,7 @@ so you can't game it by always pressing match or always pressing no-match.
 ### 🗺️ Pathfinder
 A grid of road tiles between a green **Start** and red **End**. Click two
 tiles to swap them. Build a single unbroken path. Connectivity is verified
-strictly — the path must follow each tile's openings, no off-tile cheating.
+strictly: the path must follow each tile's openings, no off-tile cheating.
 
 ### 🧩 Puzzle
 A generated picture is shown briefly, then scrambled. **Click any two tiles to
@@ -120,7 +120,7 @@ windows ramp the difficulty.
 
 ### 💃 Shapedance
 One pattern appears multiple times (possibly rotated) among unique distractors.
-Select **all** of its copies. Some tiles spin to add noise — ignore motion.
+Select **all** of its copies. Some tiles spin to add noise; ignore motion.
 
 ### 🎯 Singularity
 Find the one shape that differs. Distractors share form / colour / size /
@@ -131,13 +131,13 @@ Rotation alone never makes a shape "unique".
 
 ## 💡 Tips for the real assessment
 
-- 📖 Read the instructions on each game's first screen — the rules differ
+- 📖 Read the instructions on each game's first screen. The rules differ
   between games and HireVue **will** change small things.
 - 🤫 Quiet room, full screen, no notifications. The tests are short and timing
   matters.
 - 🎯 Accuracy beats speed up to a point: most ramps demand a sustained streak,
   not bursts.
-- 🧠 Practise reverse **DigitSpan** and 3-back+ **Flashback** specifically —
+- 🧠 Practise reverse **DigitSpan** and 3-back+ **Flashback** specifically;
   those two pull the most weight on the overall cognitive score.
 
 ---
@@ -146,7 +146,7 @@ Rotation alone never makes a shape "unique".
 
 ```
 .
-├── index.html         # ⭐ Single-file SPA — all 7 games, hash-routed
+├── index.html         # ⭐ Single-file SPA, all 7 games, hash-routed
 ├── README.md
 ├── .gitignore
 └── src/
@@ -160,18 +160,18 @@ Rotation alone never makes a shape "unique".
     └── singularity/
 ```
 
-The root [`index.html`](./index.html) is the **primary entry point** — one
+The root [`index.html`](./index.html) is the **primary entry point**: one
 file, all 7 games, smooth hash-based switching (`#hub`, `#numerosity`, …).
 
 The `/src/<game>/` folder keeps each game as a **separately runnable, fully
-self-contained HTML file** (same logic, same scoring) — handy for linking,
+self-contained HTML file** (same logic, same scoring), handy for linking,
 embedding, or studying one game's source in isolation.
 
 ---
 
 ## 🤝 Contributing
 
-Issues and PRs welcome — especially:
+Issues and PRs welcome, especially:
 
 - 🐛 Bug reports with a reproducible sequence of clicks.
 - 🎚️ Difficulty-curve tuning suggestions for any of the 7 games.
@@ -181,12 +181,12 @@ Issues and PRs welcome — especially:
 
 ## ⭐ Like it?
 
-If this saved you prep time, **please star the repo** — it's the only metric
-that tells me people are using it, and it's the only nudge that gets me to
-keep maintaining and adding games.
+If this saved you prep time, **please star the repo**. It's the only metric
+that tells me people are using it, and the only nudge that gets me to keep
+maintaining and adding games.
 
 ---
 
 ## 📜 License
 
-**MIT** — practice freely.
+[**MIT**](./LICENSE). Practice freely.
