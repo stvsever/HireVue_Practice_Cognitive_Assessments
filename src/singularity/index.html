@@ -157,13 +157,23 @@
     }
     function shapeEqual(a,b){ return a.form===b.form && a.color===b.color && a.fill===b.fill; }
 
-    // Mutate base on exactly k axes (1 or 2)
-    function mutateForUnique(base, palette, axes=1) {
+    // Mutate base on exactly k axes (1 or 2), optionally biased toward subtler axes
+    function mutateForUnique(base, palette, axes=1, axisBias=null) {
       const all = ['form','color','fill'];
-      const ax = all.slice().sort(()=>Math.random()-0.5).slice(0, axes);
+      let ax;
+      if (axisBias && axes === 1) {
+        ax = [pick(axisBias)];
+      } else {
+        ax = all.slice().sort(()=>Math.random()-0.5).slice(0, axes);
+      }
       const u = { ...base };
       for (const a of ax) {
         const pool = palette[a + 's'];
+        if (pool.length < 2) { // can't change this axis; fall back to a different one
+          const other = all.filter(x => x !== a && palette[x+'s'].length >= 2);
+          if (other.length) { const a2 = pick(other); const p2 = palette[a2+'s']; let v2 = pick(p2); while (v2 === u[a2]) v2 = pick(p2); u[a2] = v2; }
+          continue;
+        }
         let v = pick(pool);
         while (v === u[a]) v = pick(pool);
         u[a] = v;
@@ -171,19 +181,67 @@
       return u;
     }
 
+    // Forms whose visual is invariant under 90° rotation (any 90° rotation = identity-looking)
+    const ROTATION_SYMMETRIC = new Set(['circle','square','diamond','plus','hexagon']);
+    // Fills that break rotational symmetry (top vs bottom would flip and confuse)
+    const ROTATION_BREAKING_FILL = new Set(['half-top','half-bottom']);
+
+    // Decide an allowed rotation for a cell so visuals never collapse identical
+    // half-top + 180° = visually half-bottom, etc. → never rotate those fills.
+    function allowedRotation(shape) {
+      if (ROTATION_BREAKING_FILL.has(shape.fill)) return 0;
+      if (ROTATION_SYMMETRIC.has(shape.form))    return 0;
+      // for asymmetric forms with safe fills, random 0/90/180/270 is fine as visual noise
+      return R(0,3) * 90;
+    }
+
     // ------ Level spec ------
+    // Designed so even L1 is non-trivial; ramp reaches genuinely brutal levels (L25-30)
+    // that adaptive testing should never put a typical player at.
+    const MAX_LEVEL = 30;
+    const START_LEVEL = 4;
     function spec(lvl) {
-      // size of grid (n x n), and how subtle the unique difference is (axes:1=easier, with smaller palette)
-      // and motion: at high levels, some cells spin
-      if (lvl <= 2) return { n: 3, palette: { forms: FORMS.slice(0,3), colors: COLORS.slice(0,3), fills: ['solid','outline'] }, axes: 1, spinChance: 0, driftChance: 0 };
-      if (lvl <= 4) return { n: 4, palette: { forms: FORMS.slice(0,4), colors: COLORS.slice(0,4), fills: ['solid','outline'] }, axes: 1, spinChance: 0, driftChance: 0 };
-      if (lvl <= 6) return { n: 4, palette: { forms: FORMS.slice(0,5), colors: COLORS.slice(0,4), fills: ['solid','outline','half-top'] }, axes: 1, spinChance: 0.15, driftChance: 0 };
-      if (lvl <= 8) return { n: 5, palette: { forms: FORMS.slice(0,6), colors: COLORS.slice(0,5), fills: ['solid','outline','half-top','half-bottom'] }, axes: 1, spinChance: 0.2, driftChance: 0 };
-      if (lvl <= 10) return { n: 5, palette: { forms: FORMS, colors: COLORS, fills: FILLS }, axes: 1, spinChance: 0.25, driftChance: 0.1 };
-      if (lvl <= 12) return { n: 6, palette: { forms: FORMS, colors: COLORS, fills: FILLS }, axes: 1, spinChance: 0.3, driftChance: 0.15 };
-      if (lvl <= 14) return { n: 6, palette: { forms: FORMS, colors: COLORS, fills: FILLS }, axes: 1, spinChance: 0.35, driftChance: 0.2 };
-      if (lvl <= 16) return { n: 7, palette: { forms: FORMS, colors: COLORS, fills: FILLS }, axes: 1, spinChance: 0.35, driftChance: 0.2 };
-      return { n: 8, palette: { forms: FORMS, colors: COLORS, fills: FILLS }, axes: 1, spinChance: 0.4, driftChance: 0.25 };
+      lvl = Math.max(1, Math.min(MAX_LEVEL, lvl));
+      // size of grid scales with level
+      let n;
+      if (lvl <= 3)  n = 4;
+      else if (lvl <= 6)  n = 5;
+      else if (lvl <= 10) n = 6;
+      else if (lvl <= 16) n = 7;
+      else if (lvl <= 22) n = 8;
+      else                n = 9;
+
+      // palette breadth (more forms/colors = more visual noise)
+      let formCount, colorCount, fillSet;
+      if (lvl <= 4)       { formCount = 4; colorCount = 4; fillSet = ['solid','outline']; }
+      else if (lvl <= 8)  { formCount = 5; colorCount = 5; fillSet = ['solid','outline','half-top']; }
+      else if (lvl <= 12) { formCount = 6; colorCount = 6; fillSet = ['solid','outline','half-top','half-bottom']; }
+      else if (lvl <= 18) { formCount = 7; colorCount = 7; fillSet = FILLS; }
+      else                { formCount = FORMS.length; colorCount = COLORS.length; fillSet = FILLS; }
+
+      // motion noise (spinning / drifting distractors)
+      const spinChance  = Math.min(0.55, 0.05 * Math.max(0, lvl - 3));
+      const driftChance = Math.min(0.40, 0.04 * Math.max(0, lvl - 6));
+
+      // axes mutated on the unique: lower = subtler difference
+      // L1-10: 1 axis (form OR color OR fill). L11+: keep 1 axis but force the SUBTLEST axis (color hue shift) more often.
+      const axes = 1;
+      // bias: at high levels, prefer fill changes (subtlest); at low levels, prefer form (most obvious)
+      let axisBias;
+      if (lvl <= 4)       axisBias = ['form','form','form','color','fill'];
+      else if (lvl <= 10) axisBias = ['form','color','color','fill','fill'];
+      else if (lvl <= 18) axisBias = ['color','fill','fill','fill','color'];
+      else                axisBias = ['fill','fill','fill','fill','color'];
+
+      return {
+        n,
+        palette: {
+          forms: FORMS.slice(0, formCount),
+          colors: COLORS.slice(0, colorCount),
+          fills: fillSet,
+        },
+        axes, axisBias, spinChance, driftChance,
+      };
     }
 
     // ------ Render shape to SVG string ------
@@ -264,7 +322,7 @@
     let state = null;
     function freshState() {
       return {
-        active: false, level: 1, maxLevel: 1,
+        active: false, level: START_LEVEL, maxLevel: START_LEVEL,
         score: 0, streak: 0, bestStreak: 0,
         correct: 0, attempted: 0, rts: [],
         round: null, uniqueIdx: -1, roundStart: 0,
@@ -276,28 +334,28 @@
       const sp = spec(state.level);
       const n = sp.n, total = n*n;
       const base = makeBase(sp.palette);
-      const unique = mutateForUnique(base, sp.palette, sp.axes);
-      // Ensure unique really differs in identity
-      while (shapeEqual(base, unique)) Object.assign(unique, mutateForUnique(base, sp.palette, sp.axes));
+      let unique = mutateForUnique(base, sp.palette, sp.axes, sp.axisBias);
+      let guard = 0;
+      while (shapeEqual(base, unique) && guard++ < 20) {
+        unique = mutateForUnique(base, sp.palette, sp.axes, sp.axisBias);
+      }
+      // Last-resort: if mutation somehow failed, force a form change
+      if (shapeEqual(base, unique)) {
+        const other = sp.palette.forms.filter(f => f !== base.form);
+        if (other.length) unique = { ...base, form: pick(other) };
+        else unique = { ...base, color: COLORS[(COLORS.indexOf(base.color)+1) % COLORS.length] };
+      }
 
       const cells = [];
       const uniqueAt = R(0, total - 1);
       for (let i=0;i<total;i++) {
-        if (i === uniqueAt) {
-          cells.push({
-            shape: unique,
-            rotate: R(0,3)*90,
-            spin: Math.random() < sp.spinChance,
-            drift: Math.random() < sp.driftChance,
-          });
-        } else {
-          cells.push({
-            shape: base,
-            rotate: R(0,3)*90,
-            spin: Math.random() < sp.spinChance,
-            drift: Math.random() < sp.driftChance,
-          });
-        }
+        const shape = (i === uniqueAt) ? unique : base;
+        cells.push({
+          shape,
+          rotate: allowedRotation(shape),
+          spin: Math.random() < sp.spinChance,
+          drift: Math.random() < sp.driftChance,
+        });
       }
       state.uniqueIdx = uniqueAt;
       state.round = { cells, n };
@@ -342,7 +400,7 @@
         state.score += pts;
         els.status.textContent = `Correct! +${pts} (${rt.toFixed(1)}s)`;
         els.status.className = 'status ok';
-        if (state.streak >= 2) { state.level = Math.min(18, state.level + 1); state.maxLevel = Math.max(state.maxLevel, state.level); }
+        if (state.streak >= 2) { state.level = Math.min(MAX_LEVEL, state.level + 1); state.maxLevel = Math.max(state.maxLevel, state.level); }
         setTimeout(() => { if (state.active) { buildRound(); render(); } }, 600);
       } else {
         cell.classList.add('wrong');
@@ -360,7 +418,8 @@
     }
 
     function startQuestionTimer() {
-      const budget = Math.max(8, 25 - state.level * 0.9);
+      // Generous early (24s @ L1) → punishing late (4s @ L30)
+      const budget = Math.max(4, 26 - state.level * 0.75);
       let t = budget;
       els.progress.style.width = '100%';
       clearInterval(state.questionTimer);
@@ -430,13 +489,16 @@
       if (state) { state.active = false; clearInterval(state.questionTimer); clearInterval(state.totalTimer); }
       state = freshState();
       els.field.innerHTML = ''; els.status.textContent = '';
-      els.lvl.textContent='1'; els.score.textContent='0'; els.streak.textContent='0'; els.tilesChip.textContent='9';
+      els.lvl.textContent=String(START_LEVEL); els.score.textContent='0'; els.streak.textContent='0';
+      els.tilesChip.textContent = String(spec(START_LEVEL).n * spec(START_LEVEL).n);
       els.totalClock.textContent = fmtTime(TOTAL); els.progress.style.width = '100%';
       els.start.textContent = 'Start Game';
     });
     els.mAgain.addEventListener('click', () => { els.modalBack.classList.remove('show'); startGame(); });
 
     state = freshState();
+    els.lvl.textContent = String(START_LEVEL);
+    els.tilesChip.textContent = String(spec(START_LEVEL).n * spec(START_LEVEL).n);
     els.totalClock.textContent = fmtTime(TOTAL);
   })();
   </script>
